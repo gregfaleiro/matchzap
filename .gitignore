@@ -1,0 +1,10 @@
+node_modules/
+sessao/
+coleta_*.json
+hoje.json
+semana.json
+resumo.json
+grupos.json
+*.pma
+.wwebjs_cache/
+.claude/
