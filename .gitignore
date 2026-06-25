@@ -1,6 +1,7 @@
 node_modules/
 sessao/
 coleta_*.json
+exportacao_*.json
 hoje.json
 semana.json
 resumo.json
