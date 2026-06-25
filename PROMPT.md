@@ -216,3 +216,14 @@ Quando o usuário pedir para gerar o relatório, executar:
 4. Gera o `index.html` seguindo todas as regras de UX deste documento
 5. Faz `git add index.html && git commit -m "relatorio: atualiza $(date +%d/%m/%Y)" && git push`
 6. Confirma o link: https://venerable-figolla-8336dd.netlify.app
+
+---
+
+## Regras de processamento obrigatórias
+
+- NUNCA spawnar agente para processar o JSON
+- Ler o filtrado.json ou hoje.json diretamente em uma única passagem
+- Filtrar mensagens relevantes internamente antes de processar
+- Extrair ofertas e buscas, cruzar matches e gerar o HTML tudo em sequência sem pausas
+- Não perguntar confirmações intermediárias — executar do início ao fim
+- Fazer git add index.html, commit e push ao final automaticamente
