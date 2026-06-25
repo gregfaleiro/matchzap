@@ -196,9 +196,20 @@ Fonte: Inter (texto) + JetBrains Mono (números, badges, labels)
 
 ## Deploy após gerar o HTML
 
+Cada geração produz dois arquivos + atualiza o histórico:
+
 ```
-git add index.html
-git commit -m "relatorio: atualiza [DATA]"
+# 1. Salvar como index.html (já feito ao gerar)
+# 2. Copiar para arquivo histórico (TIMESTAMP = HH-mm do momento da geração)
+Copy-Item index.html relatorio_YYYY-MM-DD_HH-mm.html
+
+# 3. Atualizar historico.json — PREPEND uma nova entrada no início do array:
+# { "arquivo": "relatorio_YYYY-MM-DD_HH-mm.html", "label": "DD/MM · HHhMM · N matches" }
+# N matches = total de cards ALTO + MÉDIO gerados
+
+# 4. Git
+git add index.html relatorio_YYYY-MM-DD_HH-mm.html historico.json
+git commit -m "relatorio: atualiza DD/MM/YYYY"
 git push
 ```
 
@@ -210,12 +221,14 @@ Netlify publica automaticamente em ~30 segundos.
 
 Quando o usuário pedir para gerar o relatório, executar:
 
-1. Lê e filtra o `hoje.json` — manter só mensagens com palavras-chave de oferta ou busca
+1. Lê e filtra o arquivo de exportação mais recente (`exportacao_dia_*.json`) ou `hoje.json`
 2. Extrai ofertas e buscas conforme estrutura acima
 3. Cruza os matches
-4. Gera o `index.html` seguindo todas as regras de UX deste documento
-5. Faz `git add index.html && git commit -m "relatorio: atualiza $(date +%d/%m/%Y)" && git push`
-6. Confirma o link: https://venerable-figolla-8336dd.netlify.app
+4. Gera o `index.html` seguindo todas as regras de UX deste documento (incluindo botão de histórico no header)
+5. Determina o TIMESTAMP da geração (HH-mm atual) e copia: `relatorio_YYYY-MM-DD_HH-mm.html`
+6. Prepend nova entrada em `historico.json` com arquivo, data e total de matches
+7. Faz `git add index.html relatorio_*.html historico.json && git commit -m "relatorio: atualiza DD/MM/YYYY" && git push`
+8. Confirma o link: https://venerable-figolla-8336dd.netlify.app
 
 ---
 
