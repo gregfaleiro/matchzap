@@ -141,11 +141,11 @@ async function inicializarGrupos() {
     console.log(`🚫 Ignorando ${ignorados.size} grupo(s) listado(s) em grupos_ignorados.json`);
   }
 
-  const todos = await client.groupFetchAllParticipating();
+  const chats = await client.getChats();
 
-  GRUPOS = Object.values(todos)
-    .filter(g => !ignorados.has(g.id._serialized))
-    .map(g => ({ nome: g.name, id: g.id._serialized }))
+  GRUPOS = chats
+    .filter(c => c.isGroup && !ignorados.has(c.id._serialized))
+    .map(c => ({ nome: c.name, id: c.id._serialized }))
     .sort((a, b) => a.nome.localeCompare(b.nome));
 
   IDS_GRUPOS = GRUPOS.map(g => g.id);

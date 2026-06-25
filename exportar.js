@@ -67,19 +67,23 @@ for (const [grupo, mensagens] of Object.entries(coletaMesclada)) {
   totalFiltrado += resultado[grupo].length;
 }
 
-// Cabeçalho (stderr para não poluir o JSON no stdout)
-const label = modo === 'semana' ? 'últimos 7 dias' : 'últimas 24h';
-console.error(`⚙️  Modo       : --${modo} (${label})`);
-console.error(`📂 Arquivos   : ${arquivosExistentes.join(', ')}`);
-if (arquivosFaltando.length) {
-  console.error(`⚠️  Sem dados  : ${arquivosFaltando.join(', ')} (coletar.js não estava rodando)`);
-}
-console.error(`📊 Mensagens  : ${totalBruto} brutas → ${totalFiltrado} após filtro e deduplicação`);
-console.error('');
-console.error('Por grupo:');
-for (const [grupo, msgs] of Object.entries(resultado)) {
-  console.error(`   ${grupo}: ${msgs.length}`);
-}
-console.error('');
+// Nome do arquivo de saída com timestamp
+const agora = new Date();
+const ts = agora.toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
+const saida = path.join(dir, `exportacao_${modo}_${ts}.json`);
 
-console.log(JSON.stringify(resultado, null, 2));
+const label = modo === 'semana' ? 'últimos 7 dias' : 'últimas 24h';
+console.log(`⚙️  Modo       : --${modo} (${label})`);
+console.log(`📂 Arquivos   : ${arquivosExistentes.join(', ')}`);
+if (arquivosFaltando.length) {
+  console.log(`⚠️  Sem dados  : ${arquivosFaltando.join(', ')} (coletar.js não estava rodando)`);
+}
+console.log(`📊 Mensagens  : ${totalBruto} brutas → ${totalFiltrado} após filtro e deduplicação`);
+console.log('');
+console.log('Por grupo:');
+for (const [grupo, msgs] of Object.entries(resultado)) {
+  console.log(`   ${grupo}: ${msgs.length}`);
+}
+
+fs.writeFileSync(saida, JSON.stringify(resultado, null, 2), 'utf8');
+console.log(`\n💾 Salvo em: ${path.basename(saida)}`);
