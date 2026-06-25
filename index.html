@@ -76,121 +76,97 @@
     color: var(--white);
   }
 
-  .logo-text span {
-    color: var(--teal);
-  }
+  .logo-text span { color: var(--teal); }
 
   .header-meta {
+    text-align: right;
+  }
+
+  .header-date {
     font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--teal);
+  }
+
+  .header-stats {
     font-size: 12px;
     color: var(--muted);
+    margin-top: 2px;
   }
 
-  /* HERO */
-  .hero {
-    padding: 52px 40px 40px;
+  /* SUMMARY BAR */
+  .summary-bar {
+    background: var(--surface);
     border-bottom: 1px solid var(--border);
-  }
-
-  .hero-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    color: var(--teal);
-    text-transform: uppercase;
-    margin-bottom: 14px;
-  }
-
-  .hero h1 {
-    font-size: clamp(28px, 4vw, 42px);
-    font-weight: 700;
-    color: var(--white);
-    line-height: 1.15;
-    max-width: 640px;
-    margin-bottom: 20px;
-  }
-
-  .hero h1 em {
-    font-style: normal;
-    color: var(--teal);
-  }
-
-  .stats-row {
+    padding: 16px 40px;
     display: flex;
     gap: 32px;
     flex-wrap: wrap;
-    margin-top: 32px;
   }
 
-  .stat {
+  .stat-chip {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    align-items: center;
+    gap: 8px;
   }
 
-  .stat-value {
-    font-size: 32px;
-    font-weight: 700;
-    color: var(--white);
-    font-family: 'JetBrains Mono', monospace;
-    line-height: 1;
+  .stat-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
   }
+  .stat-dot.alto  { background: var(--alto); }
+  .stat-dot.medio { background: var(--medio); }
+  .stat-dot.baixo { background: var(--baixo); }
+  .stat-dot.teal  { background: var(--teal); }
+  .stat-dot.gold  { background: var(--gold); }
 
-  .stat-value.teal { color: var(--teal); }
-  .stat-value.gold { color: var(--gold); }
-  .stat-value.red  { color: var(--red); }
+  .stat-label { font-size: 12px; color: var(--muted); }
+  .stat-val   { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; color: var(--white); }
 
-  .stat-label {
-    font-size: 12px;
-    color: var(--muted);
-    font-weight: 500;
-  }
-
-  /* LAYOUT */
+  /* MAIN LAYOUT */
   main {
     max-width: 1100px;
     margin: 0 auto;
-    padding: 48px 40px;
-    display: flex;
-    flex-direction: column;
-    gap: 56px;
+    padding: 40px 24px 80px;
   }
 
   /* SECTION */
+  .section { margin-bottom: 56px; }
+
   .section-header {
     display: flex;
-    align-items: baseline;
-    gap: 14px;
+    align-items: center;
+    gap: 12px;
     margin-bottom: 24px;
-    padding-bottom: 14px;
+    padding-bottom: 12px;
     border-bottom: 1px solid var(--border);
   }
 
-  .section-num {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--teal);
-    font-weight: 600;
-    letter-spacing: 2px;
+  .section-icon {
+    font-size: 20px;
   }
 
   .section-title {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--white);
   }
 
-  .section-sub {
-    font-size: 13px;
-    color: var(--muted);
+  .section-count {
     margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 10px;
   }
 
-  /* MATCH CARDS */
-  .matches-grid {
-    display: flex;
-    flex-direction: column;
+  /* MATCH CARD GRID */
+  .match-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 16px;
   }
 
@@ -198,258 +174,210 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
-    overflow: hidden;
-    transition: border-color 0.2s;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: border-color 0.15s;
   }
 
-  .match-card:hover {
-    border-color: var(--teal);
-  }
+  .match-card:hover { border-color: var(--teal); }
+
+  .match-card.alto  { border-left: 3px solid var(--alto); }
+  .match-card.medio { border-left: 3px solid var(--medio); }
+  .match-card.baixo { border-left: 3px solid var(--baixo); }
 
   .match-header {
     display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 18px 20px;
-    border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
   }
 
-  .match-num {
-    font-family: 'JetBrains Mono', monospace;
+  .match-label {
     font-size: 11px;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
     color: var(--muted);
-    min-width: 28px;
   }
 
-  .match-badge {
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
+  .badge {
     font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
   }
 
   .badge-alto  { background: var(--alto-dim);  color: var(--alto);  border: 1px solid var(--alto); }
   .badge-medio { background: var(--medio-dim); color: var(--medio); border: 1px solid var(--medio); }
   .badge-baixo { background: var(--baixo-dim); color: var(--baixo); border: 1px solid var(--baixo); }
 
-  .match-title {
-    font-weight: 600;
-    font-size: 15px;
-    color: var(--white);
-    flex: 1;
-  }
-
   .match-body {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
 
-  @media (max-width: 680px) {
-    .match-body { grid-template-columns: 1fr; }
-  }
-
-  .match-side {
-    padding: 18px 20px;
-  }
-
-  .match-side:first-child {
-    border-right: 1px solid var(--border);
-  }
-
-  .match-side-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 10px;
-    font-family: 'JetBrains Mono', monospace;
-  }
-
-  .match-side-label.busca { color: var(--gold); }
-  .match-side-label.oferta { color: var(--teal); }
-
-  .match-name {
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--white);
-    margin-bottom: 6px;
-  }
-
-  .match-detail {
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.5;
-  }
-
-  .match-valor {
-    display: inline-block;
-    margin-top: 8px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--teal);
-    background: var(--teal-dim);
-    padding: 3px 8px;
-    border-radius: 4px;
-  }
-
-  .match-obs {
-    padding: 12px 20px;
-    background: #0F1614;
-    border-top: 1px solid var(--border);
-    font-size: 12px;
-    color: var(--muted);
+  .match-row {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
+    gap: 10px;
+    font-size: 13px;
   }
 
-  .match-obs::before {
-    content: '→';
-    color: var(--teal);
-    font-weight: 700;
+  .match-row-icon {
+    font-size: 14px;
     flex-shrink: 0;
     margin-top: 1px;
   }
 
-  /* DESTAQUE */
-  .match-card.destaque {
-    border-color: var(--teal);
-    box-shadow: 0 0 0 1px var(--teal-dim), 0 4px 24px rgba(0,201,167,0.08);
+  .match-row-content {}
+  .match-row-name { font-weight: 600; color: var(--white); }
+  .match-row-detail { color: var(--muted); font-size: 12px; margin-top: 1px; }
+
+  .match-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .match-divider::before,
+  .match-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
   }
 
-  .destaque-tag {
-    margin-left: auto;
-    background: var(--teal-dim);
-    color: var(--teal);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    padding: 3px 8px;
-    border-radius: 4px;
-    border: 1px solid var(--teal);
+  .match-reason {
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--bg);
+    border-radius: 6px;
+    padding: 8px 12px;
+    line-height: 1.5;
   }
 
-  /* DEMANDA TABLE */
-  .demanda-table {
+  .match-reason strong { color: var(--teal); }
+
+  /* DEMAND TABLE */
+  .demand-table-wrap {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .demand-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
   }
 
-  .demanda-table th {
-    text-align: left;
-    padding: 10px 14px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
+  .demand-table th {
+    background: var(--surface);
     color: var(--muted);
-    font-family: 'JetBrains Mono', monospace;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .demanda-table td {
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--border);
-    color: var(--white);
-    vertical-align: top;
-  }
-
-  .demanda-table tr:last-child td { border-bottom: none; }
-
-  .demanda-table tr:hover td { background: var(--surface); }
-
-  .tag-regiao {
-    display: inline-block;
-    background: var(--gold-dim);
-    color: var(--gold);
     font-size: 11px;
-    padding: 2px 7px;
-    border-radius: 4px;
-    font-weight: 500;
-    margin: 2px 2px 2px 0;
-  }
-
-  .tag-valor {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
     font-weight: 600;
-    color: var(--teal);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
     white-space: nowrap;
   }
 
-  /* ALERTAS */
-  .alertas-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 16px;
+  .demand-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--white);
   }
 
-  .alerta-card {
+  .demand-table tr:last-child td { border-bottom: none; }
+
+  .demand-table tr:hover td { background: var(--surface); }
+
+  .buyer-name {
+    font-weight: 600;
+    color: var(--white);
+  }
+
+  .buyer-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-right: 4px;
+    margin-bottom: 2px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .tag-area  { background: var(--teal-dim);  color: var(--teal);  border: 1px solid var(--teal)30; }
+  .tag-price { background: var(--gold-dim);  color: var(--gold);  border: 1px solid var(--gold)30; }
+  .tag-type  { background: var(--surface);   color: var(--muted); border: 1px solid var(--border); }
+  .tag-urgent { background: var(--red-dim);  color: var(--red);   border: 1px solid var(--red)30; }
+
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ALERTS */
+  .alert-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .alert-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
   }
 
-  .alerta-card.urgente { border-left: 3px solid var(--red); }
-  .alerta-card.oportunidade { border-left: 3px solid var(--teal); }
-  .alerta-card.sobra { border-left: 3px solid var(--gold); }
-  .alerta-card.permuta { border-left: 3px solid #9B59B6; }
+  .alert-card.warn  { border-left: 3px solid var(--gold); }
+  .alert-card.info  { border-left: 3px solid var(--teal); }
+  .alert-card.urgent { border-left: 3px solid var(--red); }
 
-  .alerta-icon {
-    font-size: 20px;
-    margin-bottom: 10px;
-    display: block;
-  }
+  .alert-icon { font-size: 20px; flex-shrink: 0; }
 
-  .alerta-titulo {
-    font-weight: 700;
-    font-size: 14px;
-    color: var(--white);
-    margin-bottom: 8px;
-  }
-
-  .alerta-desc {
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.6;
-  }
+  .alert-body {}
+  .alert-title { font-weight: 600; font-size: 14px; color: var(--white); margin-bottom: 4px; }
+  .alert-desc  { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .alert-desc strong { color: var(--white); }
 
   /* FOOTER */
   footer {
     border-top: 1px solid var(--border);
-    padding: 24px 40px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .footer-brand {
-    font-family: 'JetBrains Mono', monospace;
+    padding: 20px 40px;
+    text-align: center;
     font-size: 12px;
     color: var(--muted);
   }
 
-  .footer-brand span { color: var(--teal); }
+  footer span { color: var(--teal); }
 
-  .footer-note {
-    font-size: 12px;
-    color: var(--muted);
-  }
-
-  @media (max-width: 600px) {
-    header, .hero, main, footer { padding-left: 20px; padding-right: 20px; }
-    .stats-row { gap: 20px; }
+  /* MOBILE */
+  @media (max-width: 640px) {
+    header { padding: 20px 16px; }
+    .header-meta { display: none; }
+    .summary-bar { padding: 12px 16px; gap: 16px; }
+    main { padding: 24px 16px 60px; }
+    .match-grid { grid-template-columns: 1fr; }
+    .demand-table th, .demand-table td { padding: 10px 12px; }
   }
 </style>
 </head>
@@ -460,316 +388,607 @@
     <div class="logo-mark">MZ</div>
     <div class="logo-text">Match<span>Zap</span></div>
   </div>
-  <div class="header-meta">Goiânia · 25/06/2026 · 4 grupos monitorados</div>
+  <div class="header-meta">
+    <div class="header-date">25 / 06 / 2026</div>
+    <div class="header-stats">380 mensagens · 6 grupos · gerado às 13:50</div>
+  </div>
 </header>
 
-<div class="hero">
-  <div style="max-width:1100px; margin:0 auto; padding: 0;">
-    <div class="hero-label">Relatório Diário de Oportunidades</div>
-    <h1>Cruzamento de oferta e demanda <em>em tempo real</em> nos grupos de corretores</h1>
-    <div class="stats-row">
-      <div class="stat">
-        <div class="stat-value teal">6</div>
-        <div class="stat-label">Matches identificados</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">222</div>
-        <div class="stat-label">Mensagens processadas</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value gold">10</div>
-        <div class="stat-label">Compradores ativos</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value red">1</div>
-        <div class="stat-label">Urgência declarada</div>
-      </div>
-    </div>
+<div class="summary-bar">
+  <div class="stat-chip">
+    <div class="stat-dot alto"></div>
+    <span class="stat-label">Alto</span>
+    <span class="stat-val">5</span>
+  </div>
+  <div class="stat-chip">
+    <div class="stat-dot medio"></div>
+    <span class="stat-label">Médio</span>
+    <span class="stat-val">4</span>
+  </div>
+  <div class="stat-chip">
+    <div class="stat-dot baixo"></div>
+    <span class="stat-label">Baixo</span>
+    <span class="stat-val">3</span>
+  </div>
+  <div class="stat-chip">
+    <div class="stat-dot teal"></div>
+    <span class="stat-label">Buscas ativas</span>
+    <span class="stat-val">13</span>
+  </div>
+  <div class="stat-chip">
+    <div class="stat-dot gold"></div>
+    <span class="stat-label">Alertas</span>
+    <span class="stat-val">4</span>
   </div>
 </div>
 
 <main>
 
-  <!-- SEÇÃO 1: MATCHES -->
-  <section>
+  <!-- ─── MATCHES DO DIA ─────────────────────────────────────── -->
+  <section class="section">
     <div class="section-header">
-      <span class="section-num">01</span>
-      <span class="section-title">Matches do Dia</span>
-      <span class="section-sub">6 pares identificados</span>
+      <span class="section-icon">🎯</span>
+      <h2 class="section-title">Matches do Dia</h2>
+      <span class="section-count">12 cruzamentos</span>
     </div>
 
-    <div class="matches-grid">
+    <div class="match-grid">
 
-      <!-- MATCH 1 — DESTAQUE -->
-      <div class="match-card destaque">
+      <!-- M1 ALTO -->
+      <div class="match-card alto">
         <div class="match-header">
-          <span class="match-num">M01</span>
-          <span class="match-badge badge-alto">ALTO</span>
-          <span class="match-title">Danielle Maia × Suyane Cardoso</span>
-          <span class="destaque-tag">⚡ AÇÃO IMEDIATA</span>
+          <span class="match-label">Busca × Oferta</span>
+          <span class="badge badge-alto">ALTO</span>
         </div>
         <div class="match-body">
-          <div class="match-side">
-            <div class="match-side-label busca">Busca</div>
-            <div class="match-name">Danielle Maia | Corretora</div>
-            <div class="match-detail">Apto ou sala comercial no Setor Bueno. Aceita permuta de R$350k no valor.</div>
-            <div class="match-valor">Até R$ 600.000</div>
+          <div class="match-row">
+            <span class="match-row-icon">🔎</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Jackeline Vale — Urbs Donna</div>
+              <div class="match-row-detail">2-3Q · Bueno / Jd. América / Amazônia / Serrinha · <strong>até R$400k à vista</strong></div>
+            </div>
           </div>
-          <div class="match-side">
-            <div class="match-side-label oferta">Oferta</div>
-            <div class="match-name">Suyane Cardoso</div>
-            <div class="match-detail">Apto mobilizado Rua T28 — Setor Bueno. 57m², 2 quartos (1 suíte), varanda gourmet, andar alto, 1 vaga.</div>
-            <div class="match-valor">R$ 599.000</div>
+          <div class="match-divider">match</div>
+          <div class="match-row">
+            <span class="match-row-icon">🏢</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Ed. Columibia — Bueno, Rua T-36</div>
+              <div class="match-row-detail">72m² · 2Q 1S · 1 vaga · R$325.000 · Chayme H. Magalhães</div>
+            </div>
           </div>
         </div>
-        <div class="match-obs">Valor exato dentro do orçamento. Setor correto. Verificar disponibilidade de permuta — potencial de fechamento alto.</div>
+        <div class="match-reason"><strong>Bueno exato.</strong> 2 quartos, pronto, R$325k = R$75k abaixo do limite. Pagamento à vista facilita. Verificar condição dos armários e reformas.</div>
       </div>
 
-      <!-- MATCH 2 -->
-      <div class="match-card">
+      <!-- M2 ALTO -->
+      <div class="match-card alto">
         <div class="match-header">
-          <span class="match-num">M02</span>
-          <span class="match-badge badge-alto">ALTO</span>
-          <span class="match-title">Jackeline Vale × Silvyenn</span>
+          <span class="match-label">Busca × Oferta</span>
+          <span class="badge badge-alto">ALTO</span>
         </div>
         <div class="match-body">
-          <div class="match-side">
-            <div class="match-side-label busca">Busca</div>
-            <div class="match-name">Jackeline Vale — Urbs Donna</div>
-            <div class="match-detail">URGENTE. 2-3 quartos, Jd. América, Nova Suíça, Parque Amazônia, Bueno, Serrinha. Armários, mín. 2 banheiros, cond. até R$400. Pgto à vista.</div>
-            <div class="match-valor">Até R$ 400.000</div>
+          <div class="match-row">
+            <span class="match-row-icon">🔎</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Danielle Maia — Corretora</div>
+              <div class="match-row-detail">Apto/Sala · Bueno arredores · R$550–600k · permuta R$350k + saldo à vista</div>
+            </div>
           </div>
-          <div class="match-side">
-            <div class="match-side-label oferta">Oferta</div>
-            <div class="match-name">Silvyenn</div>
-            <div class="match-detail">Apto Setor Sudoeste — 72m², 3 quartos (1 suíte), 3° andar, armários planejados em todos os ambientes, cond. R$565, lazer completo.</div>
-            <div class="match-valor">R$ 450.000</div>
+          <div class="match-divider">match</div>
+          <div class="match-row">
+            <span class="match-row-icon">🏢</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Bueno — Rua T-28, 57m²</div>
+              <div class="match-row-detail">2Q 1S · Varanda gourmet · Mobiliado · R$599.000 · Suyane Cardoso</div>
+            </div>
           </div>
         </div>
-        <div class="match-obs">Comprador à vista com urgência declarada. Valor R$50k acima mas abertura para negociação. Setor adjacente às regiões pedidas.</div>
+        <div class="match-reason"><strong>Bueno exato, R$599k no teto máximo de R$600k.</strong> Discutir se o imóvel aceita a permuta de R$350k. Suyane não mencionou permuta mas vale consultar.</div>
       </div>
 
-      <!-- MATCH 3 -->
-      <div class="match-card">
+      <!-- M3 ALTO -->
+      <div class="match-card alto">
         <div class="match-header">
-          <span class="match-num">M03</span>
-          <span class="match-badge badge-alto">ALTO</span>
-          <span class="match-title">Busca 4 suítes Bela Vista × Rio Sena Jardim Goiás</span>
+          <span class="match-label">Busca × Oferta</span>
+          <span class="badge badge-alto">ALTO</span>
         </div>
         <div class="match-body">
-          <div class="match-side">
-            <div class="match-side-label busca">Busca</div>
-            <div class="match-name">Corretor (cliente)</div>
-            <div class="match-detail">4 quartos, 2 suítes, ~140m², lazer, 2 vagas, andar médio/alto. Bela Vista e Pedro Ludovico.</div>
-            <div class="match-valor">Até R$ 750.000</div>
+          <div class="match-row">
+            <span class="match-row-icon">🔎</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Comprador @lid (premium)</div>
+              <div class="match-row-detail">Acima 140m² · Opus/Persona Bueno/Dot Bueno · <strong>até R$2M</strong></div>
+            </div>
           </div>
-          <div class="match-side">
-            <div class="match-side-label oferta">Oferta</div>
-            <div class="match-name">Corretor (ID @lid)</div>
-            <div class="match-detail">Rio Sena — Jardim Goiás. 173m², nascente, 11° andar, 2 suítes (possível voltar a 3), semi-mobiliado, 3 vagas, Orla do Parque Flamboyant.</div>
-            <div class="match-valor">R$ 1.390.000</div>
+          <div class="match-divider">match</div>
+          <div class="match-row">
+            <span class="match-row-icon">🏢</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Persona Bueno — 153m²</div>
+              <div class="match-row-detail">3S · Elevador privativo · Andar alto · R$1.790.000 · Luciana Baptista (Creci 35514)</div>
+            </div>
           </div>
         </div>
-        <div class="match-obs">Tipologia e andar batem. Valor acima do orçamento e setor diferente — apresentar como upgrade, depende da flexibilidade do cliente.</div>
+        <div class="match-reason"><strong>Persona Bueno consta na lista específica do comprador.</strong> 153m² ✅ · R$1.79M dentro do limite de R$2M ✅ · 3 suítes plenas ✅. Match cirúrgico.</div>
       </div>
 
-      <!-- MATCH 4 -->
-      <div class="match-card">
+      <!-- M4 ALTO -->
+      <div class="match-card alto">
         <div class="match-header">
-          <span class="match-num">M04</span>
-          <span class="match-badge badge-medio">MÉDIO</span>
-          <span class="match-title">Busca 2 quartos nunca habitado Bueno × Flat Essenciale</span>
+          <span class="match-label">Busca × Oferta</span>
+          <span class="badge badge-alto">ALTO</span>
         </div>
         <div class="match-body">
-          <div class="match-side">
-            <div class="match-side-label busca">Busca</div>
-            <div class="match-name">Corretor (cliente)</div>
-            <div class="match-detail">2 quartos, nunca habitado. Bueno, Bela Vista, Pedro Ludovico, Parque Amazônia. Até R$500k.</div>
-            <div class="match-valor">Até R$ 500.000</div>
+          <div class="match-row">
+            <span class="match-row-icon">🔎</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Blumi Conexões Imobiliárias</div>
+              <div class="match-row-detail">3Q · Andar alto · 2 vagas · Pq. Amazônia / Jd. Atlântico / Vila Rosa · até R$600k</div>
+            </div>
           </div>
-          <div class="match-side">
-            <div class="match-side-label oferta">Oferta</div>
-            <div class="match-name">Corretor (ID @lid)</div>
-            <div class="match-detail">Flat Essenciale Style — Alto da Glória. 38m², nascente, andar alto, armariado, 1 vaga rotativa, porteira fechada.</div>
-            <div class="match-valor">R$ 410.000</div>
+          <div class="match-divider">match</div>
+          <div class="match-row">
+            <span class="match-row-icon">🏢</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Res. do Amazônia — Parque Amazônia</div>
+              <div class="match-row-detail">3Q 1S · 100% planejado · Lazer completo · R$550.000 · Guimarães Corrêa (62)99132-1441</div>
+            </div>
           </div>
         </div>
-        <div class="match-obs">Valor e região próxima batem. Metragem menor (38m²) e tipologia flat — verificar se atende às expectativas do cliente.</div>
+        <div class="match-reason"><strong>Pq. Amazônia exato, 3 quartos, R$550k dentro do limite.</strong> Verificar nº de vagas (oferta menciona 1 carro + 2 motos). Lazer completo conforme exigido.</div>
       </div>
 
-      <!-- MATCH 5 -->
-      <div class="match-card">
+      <!-- M5 ALTO -->
+      <div class="match-card alto">
         <div class="match-header">
-          <span class="match-num">M05</span>
-          <span class="match-badge badge-medio">MÉDIO</span>
-          <span class="match-title">Busca 3 quartos Vila Rosa × Apto Vila Rosa</span>
+          <span class="match-label">Busca × Oferta</span>
+          <span class="badge badge-alto">ALTO</span>
         </div>
         <div class="match-body">
-          <div class="match-side">
-            <div class="match-side-label busca">Busca</div>
-            <div class="match-name">Corretor (cliente)</div>
-            <div class="match-detail">3 quartos, andar alto, 2 vagas. Parque Amazônia, Jardim Atlântico ou Vila Rosa.</div>
-            <div class="match-valor">Até R$ 600.000</div>
+          <div class="match-row">
+            <span class="match-row-icon">🔎</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Mariele Carvalho</div>
+              <div class="match-row-detail">2-3Q · ~80m² · moderno · Setor Oeste (preferência) / Jd. Goiás / Alto da Glória · até R$750k</div>
+            </div>
           </div>
-          <div class="match-side">
-            <div class="match-side-label oferta">Oferta</div>
-            <div class="match-name">Corretor (ID @lid)</div>
-            <div class="match-detail">Apto Setor Vila Rosa. 61m², 2 quartos (1 suíte), mobiliado, andar alto, vista livre, 1 vaga coberta. Porteira fechada.</div>
-            <div class="match-valor">R$ 479.000</div>
+          <div class="match-divider">match</div>
+          <div class="match-row">
+            <span class="match-row-icon">🏢</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Ed. Flamboyant Residence — Alto da Glória</div>
+              <div class="match-row-detail">90m² · 3Q 1S · Andar médio-alto · Vista definitiva · R$620.000 · Chayme H. Magalhães</div>
+            </div>
           </div>
         </div>
-        <div class="match-obs">Valor e setor corretos. 2 quartos vs 3 pedidos e 1 vaga vs 2 — depende da flexibilidade. Vale apresentar como opção.</div>
+        <div class="match-reason"><strong>Alto da Glória está na lista, R$620k ≤ R$750k, 3Q.</strong> Andar médio-alto com vista definitiva atende ao desejo de "vista" da busca. Estuda proposta.</div>
       </div>
 
-      <!-- MATCH 6 -->
-      <div class="match-card">
+      <!-- M6 MÉDIO -->
+      <div class="match-card medio">
         <div class="match-header">
-          <span class="match-num">M06</span>
-          <span class="match-badge badge-medio">MÉDIO</span>
-          <span class="match-title">Busca New Liberty/New Park × Lote Solares Laguna</span>
+          <span class="match-label">Busca × Oferta</span>
+          <span class="badge badge-medio">MÉDIO</span>
         </div>
         <div class="match-body">
-          <div class="match-side">
-            <div class="match-side-label busca">Busca</div>
-            <div class="match-name">Corretor (cliente)</div>
-            <div class="match-detail">New Liberty ou New Park, próximo Parque Cascavel, 3 quartos.</div>
-            <div class="match-valor">Não informado</div>
+          <div class="match-row">
+            <span class="match-row-icon">🔎</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Mariele Carvalho</div>
+              <div class="match-row-detail">2-3Q · Setor Oeste / Jardim Goiás / Alto da Glória · até R$750k</div>
+            </div>
           </div>
-          <div class="match-side">
-            <div class="match-side-label oferta">Oferta</div>
-            <div class="match-name">Corretor (ID @lid)</div>
-            <div class="match-detail">Lote Solares Laguna — 513m², esquina, ao lado do Wake Park na GO-020. Quitado e escriturado. Aceita parcelamento e financiamento.</div>
-            <div class="match-valor">R$ 480.000</div>
+          <div class="match-divider">match</div>
+          <div class="match-row">
+            <span class="match-row-icon">🏢</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Visage Platine — Jardim Goiás</div>
+              <div class="match-row-detail">86m² · 3 suítes (2 americanas) · Lavabo · 3 vagas + escaninho · R$650.000 · Guimarães Corrêa</div>
+            </div>
           </div>
         </div>
-        <div class="match-obs">Região próxima (GO-020/Cascavel). Tipologia diferente — lote vs apartamento. Baixa compatibilidade direta, pode ser interesse de investimento.</div>
+        <div class="match-reason">Jardim Goiás na lista. R$650k dentro do orçamento. Ponto fraco: busca pede 2-3Q simples mas oferta tem 3 suítes — pode ser excesso de padrão para o orçamento.</div>
+      </div>
+
+      <!-- M7 MÉDIO -->
+      <div class="match-card medio">
+        <div class="match-header">
+          <span class="match-label">Busca × Oferta</span>
+          <span class="badge badge-medio">MÉDIO</span>
+        </div>
+        <div class="match-body">
+          <div class="match-row">
+            <span class="match-row-icon">🔎</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Comprador @lid</div>
+              <div class="match-row-detail">3Q · Setor Pedro / Bela Vista / Bueno · até R$600k</div>
+            </div>
+          </div>
+          <div class="match-divider">match</div>
+          <div class="match-row">
+            <span class="match-row-icon">🏢</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Apt. Bueno — 91m², 3Q 1S</div>
+              <div class="match-row-detail">1 vaga · Lazer com salão e área de churrasco · R$460.000 · Guimarães Corrêa</div>
+            </div>
+          </div>
+        </div>
+        <div class="match-reason">Bueno correto, 3 quartos, R$460k bem dentro do limite. Ponto fraco: apenas 1 vaga; não há informação de andar — verificar se atende ao padrão do comprador.</div>
+      </div>
+
+      <!-- M8 MÉDIO -->
+      <div class="match-card medio">
+        <div class="match-header">
+          <span class="match-label">Busca × Oferta</span>
+          <span class="badge badge-medio">MÉDIO</span>
+        </div>
+        <div class="match-body">
+          <div class="match-row">
+            <span class="match-row-icon">🔎</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Amanda Rezende</div>
+              <div class="match-row-detail">38–50m² · Oeste / Marista / baixo Bueno · não mobiliado · até R$500k · Airbnb</div>
+            </div>
+          </div>
+          <div class="match-divider">match</div>
+          <div class="match-row">
+            <span class="match-row-icon">🏢</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Essenciale Style — Alto da Glória</div>
+              <div class="match-row-detail">38m² · Flat · Andar alto · Nascente · 1 vaga rotativa · R$410.000 · Chayme H. Magalhães</div>
+            </div>
+          </div>
+        </div>
+        <div class="match-reason">38m² exato no piso mínimo. R$410k dentro do orçamento. Flat adequado para Airbnb. Ponto fraco: está armariado (Amanda pediu não mobiliado) — verificar se armários são removíveis.</div>
+      </div>
+
+      <!-- M9 MÉDIO -->
+      <div class="match-card medio">
+        <div class="match-header">
+          <span class="match-label">Busca × Oferta</span>
+          <span class="badge badge-medio">MÉDIO</span>
+        </div>
+        <div class="match-body">
+          <div class="match-row">
+            <span class="match-row-icon">🔎</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Anderson Mota</div>
+              <div class="match-row-detail">2Q · nunca habitado · até R$500k · Bueno / Bela Vista / Pedro / Pq. Amazônia</div>
+            </div>
+          </div>
+          <div class="match-divider">match</div>
+          <div class="match-row">
+            <span class="match-row-icon">🏢</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Ed. Columibia — Bueno, Rua T-36</div>
+              <div class="match-row-detail">72m² · 2Q 1S · Andar mediano · 1 vaga · R$325.000 · Chayme H. Magalhães</div>
+            </div>
+          </div>
+        </div>
+        <div class="match-reason">Bueno correto, 2Q, R$325k muito abaixo do limite. Ponto de atenção: "nunca habitado" — prédio aparenta ter anos de uso. Confirmar conservação antes de apresentar.</div>
+      </div>
+
+      <!-- M10 BAIXO -->
+      <div class="match-card baixo">
+        <div class="match-header">
+          <span class="match-label">Busca × Oferta</span>
+          <span class="badge badge-baixo">BAIXO</span>
+        </div>
+        <div class="match-body">
+          <div class="match-row">
+            <span class="match-row-icon">🔎</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Jackeline Vale — Urbs Donna</div>
+              <div class="match-row-detail">2-3Q · Bueno/Jd.América/Amazônia · até R$400k</div>
+            </div>
+          </div>
+          <div class="match-divider">match parcial</div>
+          <div class="match-row">
+            <span class="match-row-icon">🏢</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Res. Viva Sudoeste — 72m²</div>
+              <div class="match-row-detail">3Q 1S · 3º andar · Armários em todos os ambientes · R$450.000 · Silvyenn</div>
+            </div>
+          </div>
+        </div>
+        <div class="match-reason">Área e tipologia corretas. Ponto fraco: R$450k > R$400k (compradora foi enfática no limite) e Sudoeste não está na lista de bairros. Difícil mas não impossível.</div>
+      </div>
+
+      <!-- M11 BAIXO -->
+      <div class="match-card baixo">
+        <div class="match-header">
+          <span class="match-label">Busca × Oferta</span>
+          <span class="badge badge-baixo">BAIXO</span>
+        </div>
+        <div class="match-body">
+          <div class="match-row">
+            <span class="match-row-icon">🔎</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Alessandro (cliente)</div>
+              <div class="match-row-detail">4Q 2S · ~140m² · lazer · 2 vagas · Bela Vista / Pedro Ludovico · até R$750k</div>
+            </div>
+          </div>
+          <div class="match-divider">match parcial</div>
+          <div class="match-row">
+            <span class="match-row-icon">🏢</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Setor Oeste — 174m², 4Q 1S</div>
+              <div class="match-row-detail">Sala 3 amb · Lavabo · Varanda · Armários · R$550.000 · Álvaro de Castro</div>
+            </div>
+          </div>
+        </div>
+        <div class="match-reason">4 quartos e tamanho corretos, bem abaixo do orçamento. Bloqueios: apenas 1 suíte (pedido: 2), área diferente (Oeste vs Bela Vista/Pedro), sem info de lazer.</div>
+      </div>
+
+      <!-- M12 BAIXO -->
+      <div class="match-card baixo">
+        <div class="match-header">
+          <span class="match-label">Busca × Oferta</span>
+          <span class="badge badge-baixo">BAIXO</span>
+        </div>
+        <div class="match-body">
+          <div class="match-row">
+            <span class="match-row-icon">🔎</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Blumi / Túlio — Pq. Amazônia</div>
+              <div class="match-row-detail">3Q · Pq. Amazônia · até R$600k</div>
+            </div>
+          </div>
+          <div class="match-divider">match parcial</div>
+          <div class="match-row">
+            <span class="match-row-icon">🏢</span>
+            <div class="match-row-content">
+              <div class="match-row-name">Apt. Pq. Amazônia — Av. Antônio Fidelis</div>
+              <div class="match-row-detail">3Q 1S · Varanda gourmet · Lazer resort · Cond. R$620 · R$570.000 · Guimarães Corrêa</div>
+            </div>
+          </div>
+        </div>
+        <div class="match-reason">Área e tipologia corretas. R$570k dentro do limite (Blumi até R$600k). Ponto fraco: Blumi pede andar alto — andar não informado na oferta. Confirmar antes de apresentar.</div>
       </div>
 
     </div>
   </section>
 
-  <!-- SEÇÃO 2: DEMANDA -->
-  <section>
+  <!-- ─── DEMANDA ATIVA ────────────────────────────────────────── -->
+  <section class="section">
     <div class="section-header">
-      <span class="section-num">02</span>
-      <span class="section-title">Demanda Ativa Hoje</span>
-      <span class="section-sub">10 compradores nos grupos</span>
+      <span class="section-icon">📋</span>
+      <h2 class="section-title">Demanda Ativa</h2>
+      <span class="section-count">13 buscas</span>
     </div>
 
-    <table class="demanda-table">
-      <thead>
-        <tr>
-          <th>Perfil buscado</th>
-          <th>Região</th>
-          <th>Orçamento</th>
-          <th>Obs.</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Apto 4 quartos, 2 suítes, ~140m², andar alto</td>
-          <td><span class="tag-regiao">Bela Vista</span><span class="tag-regiao">Pedro Ludovico</span></td>
-          <td><span class="tag-valor">Até R$750k</span></td>
-          <td>Para cliente</td>
-        </tr>
-        <tr>
-          <td>Apto 2-3 quartos pronto, armários, mín. 2 banheiros</td>
-          <td><span class="tag-regiao">Jd. América</span><span class="tag-regiao">Bueno</span><span class="tag-regiao">Amazônia</span><span class="tag-regiao">Serrinha</span></td>
-          <td><span class="tag-valor">Até R$400k</span></td>
-          <td>À vista · URGENTE</td>
-        </tr>
-        <tr>
-          <td>Apto ou sala comercial + permuta R$350k</td>
-          <td><span class="tag-regiao">Bueno</span></td>
-          <td><span class="tag-valor">R$550k–R$600k</span></td>
-          <td>Aceita permuta</td>
-        </tr>
-        <tr>
-          <td>Apto 3 quartos, andar alto, 2 vagas</td>
-          <td><span class="tag-regiao">Parque Amazônia</span><span class="tag-regiao">Jd. Atlântico</span><span class="tag-regiao">Vila Rosa</span></td>
-          <td><span class="tag-valor">Até R$600k</span></td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td>Apto 2 quartos, nunca habitado</td>
-          <td><span class="tag-regiao">Bueno</span><span class="tag-regiao">Bela Vista</span><span class="tag-regiao">Pedro Ludovico</span></td>
-          <td><span class="tag-valor">Até R$500k</span></td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td>Casa 3 quartos</td>
-          <td><span class="tag-regiao">Eli Forte</span><span class="tag-regiao">Santa Rita</span><span class="tag-regiao">Moinho dos Ventos</span></td>
-          <td><span class="tag-valor">Até R$400k</span></td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td>Flat para alugar, mobiliado, novo/seminovo</td>
-          <td><span class="tag-regiao">Marista</span><span class="tag-regiao">Bueno</span></td>
-          <td><span class="tag-valor">Até R$4.000/mês</span></td>
-          <td>Locação</td>
-        </tr>
-        <tr>
-          <td>Lote 617m², 14m frente</td>
-          <td><span class="tag-regiao">Jaó</span></td>
-          <td><span class="tag-valor">Até R$600k</span></td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td>Quasar Oeste</td>
-          <td><span class="tag-regiao">Setor Oeste</span></td>
-          <td><span class="tag-valor">Não informado</span></td>
-          <td>Aceita permuta</td>
-        </tr>
-        <tr>
-          <td>3 lotes juntos MCMV + Apto financiamento</td>
-          <td><span class="tag-regiao">Garavelo</span></td>
-          <td><span class="tag-valor">R$450k + R$270k</span></td>
-          <td>Financiamento</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="demand-table-wrap">
+      <table class="demand-table">
+        <thead>
+          <tr>
+            <th>Comprador</th>
+            <th>Tipo</th>
+            <th>Área / Bairro</th>
+            <th>Orçamento</th>
+            <th>Obs</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="buyer-name">Jackeline Vale</div>
+              <div class="buyer-sub">Urbs Donna</div>
+            </td>
+            <td>Apto 2-3Q</td>
+            <td>
+              <span class="tag tag-area">Bueno</span>
+              <span class="tag tag-area">Jd. América</span>
+              <span class="tag tag-area">Pq. Amazônia</span>
+              <span class="tag tag-area">Serrinha</span>
+            </td>
+            <td><span class="tag tag-price mono">R$400k</span></td>
+            <td><span class="tag tag-urgent">URGENTE</span> à vista · armários · ≥2 banheiros · cond. baixo</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="buyer-name">Danielle Maia</div>
+              <div class="buyer-sub">Corretora</div>
+            </td>
+            <td>Apto / Sala</td>
+            <td><span class="tag tag-area">Bueno arredores</span></td>
+            <td><span class="tag tag-price mono">R$550–600k</span></td>
+            <td>Permuta R$350k + saldo à vista · aceita sala comercial</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="buyer-name">Mariele Carvalho</div>
+              <div class="buyer-sub">—</div>
+            </td>
+            <td>Apto 2-3Q ~80m²</td>
+            <td>
+              <span class="tag tag-area">Setor Oeste</span>
+              <span class="tag tag-area">Jd. Goiás</span>
+              <span class="tag tag-area">Alto da Glória</span>
+            </td>
+            <td><span class="tag tag-price mono">R$750k</span></td>
+            <td>Moderno · andar alto · boa vista</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="buyer-name">Comprador @lid</div>
+              <div class="buyer-sub">Premium</div>
+            </td>
+            <td>Apto 140m²+</td>
+            <td>
+              <span class="tag tag-area">Opus Araguaia</span>
+              <span class="tag tag-area">Persona Bueno</span>
+              <span class="tag tag-area">Dot Bueno</span>
+              <span class="tag tag-area">Blanc Casa Design</span>
+            </td>
+            <td><span class="tag tag-price mono">R$2M</span></td>
+            <td>Prédios específicos listados · acima de 140m² c/ armários</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="buyer-name">Alessandro</div>
+              <div class="buyer-sub">Corretor (cliente)</div>
+            </td>
+            <td>Apto 4Q 2S ~140m²</td>
+            <td>
+              <span class="tag tag-area">Bela Vista</span>
+              <span class="tag tag-area">Pedro Ludovico</span>
+            </td>
+            <td><span class="tag tag-price mono">R$750k</span></td>
+            <td>Lazer · 2 vagas · andar médio ou alto</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="buyer-name">@lid (anon.)</div>
+              <div class="buyer-sub">—</div>
+            </td>
+            <td>Apto 3Q</td>
+            <td>
+              <span class="tag tag-area">Setor Pedro</span>
+              <span class="tag tag-area">Bela Vista</span>
+              <span class="tag tag-area">Bueno</span>
+            </td>
+            <td><span class="tag tag-price mono">R$600k</span></td>
+            <td>Sem informações adicionais</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="buyer-name">Blumi Conexões</div>
+              <div class="buyer-sub">Imobiliárias</div>
+            </td>
+            <td>Apto 3Q</td>
+            <td>
+              <span class="tag tag-area">Pq. Amazônia</span>
+              <span class="tag tag-area">Jd. Atlântico</span>
+              <span class="tag tag-area">Vila Rosa</span>
+            </td>
+            <td><span class="tag tag-price mono">R$600k</span></td>
+            <td>Andar alto · 2 vagas</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="buyer-name">Anderson Mota</div>
+              <div class="buyer-sub">—</div>
+            </td>
+            <td>Apto 2Q</td>
+            <td>
+              <span class="tag tag-area">Bueno</span>
+              <span class="tag tag-area">Bela Vista</span>
+              <span class="tag tag-area">Pq. Amazônia</span>
+            </td>
+            <td><span class="tag tag-price mono">R$500k</span></td>
+            <td>Nunca habitado</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="buyer-name">Amanda Rezende</div>
+              <div class="buyer-sub">—</div>
+            </td>
+            <td>Apto 38–50m²</td>
+            <td>
+              <span class="tag tag-area">Setor Oeste</span>
+              <span class="tag tag-area">Marista</span>
+              <span class="tag tag-area">Baixo Bueno</span>
+            </td>
+            <td><span class="tag tag-price mono">R$500k</span></td>
+            <td>Não mobiliado · uso Airbnb</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="buyer-name">Marcelo Gualberto</div>
+              <div class="buyer-sub">—</div>
+            </td>
+            <td>Flat Aluguel</td>
+            <td>
+              <span class="tag tag-area">Marista</span>
+              <span class="tag tag-area">Bueno</span>
+            </td>
+            <td><span class="tag tag-price mono">R$4k/mês</span></td>
+            <td>Mobiliado · novo ou seminovo · próx. Ricardo Paranhos</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="buyer-name">Isaac Domiciano</div>
+              <div class="buyer-sub">—</div>
+            </td>
+            <td>Apto 3Q</td>
+            <td><span class="tag tag-area">Próx. Bueno</span></td>
+            <td><span class="tag tag-price mono">R$380k</span></td>
+            <td>Regiões próximas ao Bueno</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="buyer-name">Luis Fernando</div>
+              <div class="buyer-sub">—</div>
+            </td>
+            <td>Lotes + Aptos</td>
+            <td><span class="tag tag-area">Garavelo</span></td>
+            <td><span class="tag tag-price mono">R$450k / R$270k / R$160k</span></td>
+            <td>3 lotes juntos MCMV + 2 aptos diferentes faixas · financiamento 100%</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="buyer-name">Meire Ivone</div>
+              <div class="buyer-sub">Corretora</div>
+            </td>
+            <td>Apto 2/4</td>
+            <td><span class="tag tag-area">Vaca Brava</span></td>
+            <td><span class="tag tag-price mono">consultar</span></td>
+            <td>Opus Gyro Vaca Brava · c/ armários · busca específica de empreendimento</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 
-  <!-- SEÇÃO 3: ALERTAS -->
-  <section>
+  <!-- ─── ALERTAS ──────────────────────────────────────────────── -->
+  <section class="section">
     <div class="section-header">
-      <span class="section-num">03</span>
-      <span class="section-title">Alertas</span>
-      <span class="section-sub">Padrões identificados hoje</span>
+      <span class="section-icon">⚡</span>
+      <h2 class="section-title">Alertas</h2>
+      <span class="section-count">4 sinais</span>
     </div>
 
-    <div class="alertas-grid">
-      <div class="alerta-card urgente">
-        <span class="alerta-icon">🚨</span>
-        <div class="alerta-titulo">Comprador Quente — Ação Imediata</div>
-        <div class="alerta-desc">Jackeline Vale (Urbs Donna) marcou busca como URGENTE com pagamento à vista até R$400k. Comprador com decisão rápida — prioridade máxima de contato.</div>
+    <div class="alert-grid">
+
+      <div class="alert-card urgent">
+        <div class="alert-icon">🚨</div>
+        <div class="alert-body">
+          <div class="alert-title">Jackeline Vale — Compradora de alta intenção</div>
+          <div class="alert-desc">Postou a mesma busca em <strong>3 grupos diferentes</strong> (Só Mobiliados, Corretores Vip's e BUSQUE IMÓVEIS) no mesmo dia. Pagamento à vista, R$400k, bairros nobres. Perfil raro — prioridade máxima de contato. Corretor com oferta aderente deve agir hoje.</div>
+        </div>
       </div>
 
-      <div class="alerta-card oportunidade">
-        <span class="alerta-icon">📍</span>
-        <div class="alerta-titulo">Gap de Captação — Amazônia e Vila Rosa</div>
-        <div class="alerta-desc">Alta demanda por aptos R$400k–R$600k no Parque Amazônia, Jardim Atlântico e Vila Rosa. Pouca oferta nesses setores hoje. Quem captar nessa faixa tem saída garantida.</div>
+      <div class="alert-card warn">
+        <div class="alert-icon">🔍</div>
+        <div class="alert-body">
+          <div class="alert-title">Meire Ivone busca "Opus Gyro Vaca Brava" — possível match com "Gyro Rooftop"</div>
+          <div class="alert-desc">A Meire busca especificamente o <strong>Opus Gyro Vaca Brava</strong>. No grupo Só Mobiliados, um @lid ofertou um apto no <strong>Gyro Rooftop</strong> (47m², R$700k). Podem ser o mesmo empreendimento com nomes distintos — verificar endereço / CNPJ do prédio antes de conectar as partes.</div>
+        </div>
       </div>
 
-      <div class="alerta-card sobra">
-        <span class="alerta-icon">⚠️</span>
-        <div class="alerta-titulo">Sobre-oferta — Setor Bueno R$450k–R$700k</div>
-        <div class="alerta-desc">Pelo menos 6 unidades similares ofertadas hoje no Bueno nessa faixa. Alta competição, baixa diferenciação. Evitar captar mais do mesmo perfil sem diferencial claro.</div>
+      <div class="alert-card warn">
+        <div class="alert-icon">📊</div>
+        <div class="alert-body">
+          <div class="alert-title">@lid premium: corretor buscando e vendendo no mesmo grupo</div>
+          <div class="alert-desc">O número <strong>244246921670708@lid</strong> publicou 8 ofertas (Gran Marista R$1.98M, West 22 R$1.18M, Acquarelle R$1.33M, Loft Jd. Goiás R$490k, St. Oeste R$650k, Alphaville R$1.45M) e em seguida postou <strong>busca de apto acima de 140m²</strong> no mesmo grupo — possível corretor com carteira própria procurando permuta ou vendendo para comprar.</div>
+        </div>
       </div>
 
-      <div class="alerta-card permuta">
-        <span class="alerta-icon">🔄</span>
-        <div class="alerta-titulo">Permuta Ativa — 2 buscadores</div>
-        <div class="alerta-desc">Danielle Maia (permuta R$350k no Bueno) e busca do Quasar Oeste aceitam permuta. Oportunidade para corretores com carteira diversificada.</div>
+      <div class="alert-card info">
+        <div class="alert-icon">🔄</div>
+        <div class="alert-body">
+          <div class="alert-title">Marcelo Gualberto — busca repetida em 2 grupos</div>
+          <div class="alert-desc">Publicou busca idêntica de flat para aluguel (Marista/Bueno, R$4k–R$5k/mês, mobiliado) em <strong>Corretores Vip's e BUSQUE IMÓVEIS</strong>. Comprador/locatário ativo. Chayme tem Ed. Spot Marista (71m², R$920k para venda) e Gyro / Essenciale para locação. Também há oferta de Luciana Baptista com ID Vida Urbana (~R$839k).</div>
+        </div>
       </div>
+
     </div>
   </section>
 
 </main>
 
 <footer>
-  <div class="footer-brand">Match<span>Zap</span> · Inteligência de mercado em tempo real</div>
-  <div class="footer-note">Processado em 25/06/2026 · 222 mensagens · 4 grupos</div>
+  Gerado por <span>MatchZap</span> · 25/06/2026 · 380 mensagens de 6 grupos do WhatsApp
 </footer>
 
 </body>
