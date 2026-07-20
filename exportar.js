@@ -4,18 +4,7 @@ const path = require('path');
 const dir = __dirname;
 const args = process.argv.slice(2);
 const modo = args.includes('--semana') ? 'semana' : 'dia';
-const diasJanela = modo === 'semana' ? 7 : 1;
-
-// Gera lista de datas esperadas (YYYY-MM-DD) dos últimos N dias
-function datasEsperadas(n) {
-  const datas = [];
-  for (let i = 0; i < n; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    datas.push(d.toISOString().slice(0, 10));
-  }
-  return datas;
-}
+const arquivoUltimaExportacao = path.join(dir, 'ultima_exportacao.json');
 
 // Converte "25/06/2026, 10:32:15" → Date
 function parseHora(hora) {
@@ -26,21 +15,55 @@ function parseHora(hora) {
   return new Date(`${y}-${m}-${d}T${timePart}`);
 }
 
-const limiteMs = Date.now() - diasJanela * 24 * 60 * 60 * 1000;
+// Lista todos os coleta_*.json disponíveis
+const todosArquivos = fs.readdirSync(dir)
+  .filter(f => /^coleta_\d{4}-\d{2}-\d{2}\.json$/.test(f))
+  .sort();
 
-const datas = datasEsperadas(diasJanela);
-const arquivosEsperados = datas.map(d => `coleta_${d}.json`);
-const arquivosExistentes = arquivosEsperados.filter(f => fs.existsSync(path.join(dir, f)));
-const arquivosFaltando  = arquivosEsperados.filter(f => !fs.existsSync(path.join(dir, f)));
+let arquivosParaProcessar;
+let limiteMs;
+let origemLimite;
 
-if (!arquivosExistentes.length) {
+if (modo === 'semana') {
+  // Semana: últimos 7 dias, ignora histórico de exportações anteriores
+  const limite7dias = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  arquivosParaProcessar = todosArquivos.filter(f => f.slice(7, 17) >= limite7dias);
+  limiteMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  origemLimite = 'últimos 7 dias';
+} else {
+  // Dia: processa apenas arquivos de coleta ainda não exportados
+  let arquivosJaProcessados = [];
+  let ultimaMs = null;
+
+  if (fs.existsSync(arquivoUltimaExportacao)) {
+    const salvo = JSON.parse(fs.readFileSync(arquivoUltimaExportacao, 'utf8'));
+    arquivosJaProcessados = salvo.arquivos || [];
+    ultimaMs = salvo.ultima ? new Date(salvo.ultima).getTime() : null;
+  }
+
+  arquivosParaProcessar = todosArquivos.filter(f => !arquivosJaProcessados.includes(f));
+
+  if (!arquivosParaProcessar.length) {
+    console.log('ℹ️  Nenhum arquivo novo desde a última exportação.');
+    console.log('   Rode o coletar.js primeiro para capturar novos dados.');
+    process.exit(0);
+  }
+
+  // Filtra mensagens a partir do momento da última exportação (remove sobreposição do histórico 24h)
+  limiteMs = ultimaMs ?? (Date.now() - 24 * 60 * 60 * 1000);
+  origemLimite = ultimaMs
+    ? `desde última exportação (${new Date(ultimaMs).toLocaleString('pt-BR')})`
+    : 'últimas 24h (primeira exportação)';
+}
+
+if (!arquivosParaProcessar.length) {
   console.error('Nenhum arquivo de coleta encontrado para o período.');
   process.exit(1);
 }
 
-// Carrega e mescla todos os arquivos disponíveis
+// Carrega e mescla os arquivos selecionados
 const coletaMesclada = {};
-for (const arquivo of arquivosExistentes) {
+for (const arquivo of arquivosParaProcessar) {
   const dados = JSON.parse(fs.readFileSync(path.join(dir, arquivo), 'utf8'));
   for (const [grupo, mensagens] of Object.entries(dados)) {
     if (!coletaMesclada[grupo]) coletaMesclada[grupo] = [];
@@ -72,12 +95,8 @@ const agora = new Date();
 const ts = agora.toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
 const saida = path.join(dir, `exportacao_${modo}_${ts}.json`);
 
-const label = modo === 'semana' ? 'últimos 7 dias' : 'últimas 24h';
-console.log(`⚙️  Modo       : --${modo} (${label})`);
-console.log(`📂 Arquivos   : ${arquivosExistentes.join(', ')}`);
-if (arquivosFaltando.length) {
-  console.log(`⚠️  Sem dados  : ${arquivosFaltando.join(', ')} (coletar.js não estava rodando)`);
-}
+console.log(`⚙️  Modo       : --${modo} (${origemLimite})`);
+console.log(`📂 Arquivos   : ${arquivosParaProcessar.join(', ')}`);
 console.log(`📊 Mensagens  : ${totalBruto} brutas → ${totalFiltrado} após filtro e deduplicação`);
 console.log('');
 console.log('Por grupo:');
@@ -87,3 +106,15 @@ for (const [grupo, msgs] of Object.entries(resultado)) {
 
 fs.writeFileSync(saida, JSON.stringify(resultado, null, 2), 'utf8');
 console.log(`\n💾 Salvo em: ${path.basename(saida)}`);
+
+// Atualiza controle: marca arquivos como processados e salva timestamp
+if (modo === 'dia') {
+  let salvo = { arquivos: [], ultima: null };
+  if (fs.existsSync(arquivoUltimaExportacao)) {
+    salvo = JSON.parse(fs.readFileSync(arquivoUltimaExportacao, 'utf8'));
+  }
+  salvo.arquivos = [...new Set([...(salvo.arquivos || []), ...arquivosParaProcessar])];
+  salvo.ultima = agora.toISOString();
+  fs.writeFileSync(arquivoUltimaExportacao, JSON.stringify(salvo, null, 2), 'utf8');
+  console.log(`🕐 Controle atualizado em: ultima_exportacao.json`);
+}

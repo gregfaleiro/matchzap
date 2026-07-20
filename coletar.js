@@ -1,35 +1,32 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
+const { exec } = require('child_process');
 const fs = require('fs');
 
 const arquivo = `coleta_${new Date().toISOString().slice(0, 10)}.json`;
+const arquivoUltimaColeta = 'ultima_coleta.json';
 
-// Grupos e coleta são populados dinamicamente após conexão
-let GRUPOS = [];
-let IDS_GRUPOS = [];
+// Determina limite de tempo
+let limiteColeta;
+let origemLimite;
+if (fs.existsSync(arquivoUltimaColeta)) {
+  const { ultima } = JSON.parse(fs.readFileSync(arquivoUltimaColeta, 'utf8'));
+  const ultimaMs = new Date(ultima).getTime();
+  const sete_dias_ms = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  limiteColeta = Math.max(ultimaMs, sete_dias_ms);
+  origemLimite = limiteColeta === sete_dias_ms
+    ? 'últimos 7 dias (cap automático)'
+    : `desde última coleta (${new Date(ultima).toLocaleString('pt-BR')})`;
+} else {
+  limiteColeta = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  origemLimite = 'últimos 7 dias (primeira coleta)';
+}
+
+// Carrega coleta existente do dia ou começa do zero
 let coleta = {};
-
 if (fs.existsSync(arquivo)) {
   coleta = JSON.parse(fs.readFileSync(arquivo, 'utf8'));
   console.log(`📂 Continuando coleta do dia: ${arquivo}`);
-}
-
-let salvarTimer = null;
-function salvar() {
-  clearTimeout(salvarTimer);
-  salvarTimer = setTimeout(() => {
-    fs.writeFile(arquivo, JSON.stringify(coleta, null, 2), 'utf8', (err) => {
-      if (err) console.error('Erro ao salvar:', err.message);
-    });
-  }, 500);
-}
-
-function nomeGrupo(id) {
-  return GRUPOS.find(g => g.id === id)?.nome || id;
-}
-
-function chave(entrada) {
-  return `${entrada.hora}|${entrada.de}|${entrada.texto}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -96,203 +93,149 @@ function extrairEmpreendimento(texto) {
 }
 
 // ---------------------------------------------------------------------------
-// Contatos
+// Processamento de mensagem
 // ---------------------------------------------------------------------------
 
-function formatarTelefone(numero) {
-  const digits = (numero || '').replace(/\D/g, '');
-  if (!digits) return '';
-  const local = digits.startsWith('55') && digits.length > 11 ? digits.slice(2) : digits;
-  const ddd = local.slice(0, 2);
-  const num = local.slice(2);
-  if (num.length === 9) return `(${ddd}) ${num.slice(0, 5)}-${num.slice(5)}`;
-  if (num.length === 8) return `(${ddd}) ${num.slice(0, 4)}-${num.slice(4)}`;
-  return digits;
-}
+const vistos = new Set();
 
-const contatoCache = new Map();
+function processarMensagem(msg, nomeGrupo) {
+  const texto = msg.body;
+  if (!texto || texto.trim().length < 5) return;
+  if (msg.fromMe) return;
 
-async function resolverContato(authorId) {
-  if (!authorId) return { nome: 'desconhecido', telefone: '' };
-  if (contatoCache.has(authorId)) return contatoCache.get(authorId);
-  try {
-    const contato = await client.getContactById(authorId);
-    const nome = contato.pushname || contato.name || contato.shortName || authorId;
-    const telefone = formatarTelefone(contato.number || contato.id?.user || '');
-    const info = { nome, telefone };
-    contatoCache.set(authorId, info);
-    return info;
-  } catch {
-    return { nome: authorId, telefone: '' };
-  }
+  const ts = msg.timestamp * 1000;
+  if (!ts || ts < limiteColeta) return;
+
+  const hora = new Date(ts).toLocaleString('pt-BR');
+  const de = msg._data?.notifyName || msg._data?.notify || msg.author?.split('@')[0] || 'Desconhecido';
+  const telefone = msg.author?.split('@')[0] || '';
+  const empreendimento = extrairEmpreendimento(texto.trim());
+
+  const chave = `${hora}|${de}|${texto.trim()}`;
+  if (vistos.has(chave)) return;
+  vistos.add(chave);
+
+  if (!coleta[nomeGrupo]) coleta[nomeGrupo] = [];
+  coleta[nomeGrupo].push({ de, telefone, texto: texto.trim(), hora, empreendimento, grupo: nomeGrupo });
 }
 
 // ---------------------------------------------------------------------------
-// Descoberta dinâmica de grupos
+// Salvar e encerrar
 // ---------------------------------------------------------------------------
-
-async function inicializarGrupos() {
-  console.log('🔍 Buscando grupos participantes...\n');
-
-  const ignorados = new Set();
-  if (fs.existsSync('grupos_ignorados.json')) {
-    const ids = JSON.parse(fs.readFileSync('grupos_ignorados.json', 'utf8'));
-    ids.forEach(id => ignorados.add(id));
-    console.log(`🚫 Ignorando ${ignorados.size} grupo(s) listado(s) em grupos_ignorados.json`);
-  }
-
-  const chats = await client.getChats();
-
-  GRUPOS = chats
-    .filter(c => c.isGroup && !ignorados.has(c.id._serialized))
-    .map(c => ({ nome: c.name, id: c.id._serialized }))
-    .sort((a, b) => a.nome.localeCompare(b.nome));
-
-  IDS_GRUPOS = GRUPOS.map(g => g.id);
-
-  // Garante entrada no coleta para cada grupo descoberto
-  GRUPOS.forEach(g => {
-    if (!coleta[g.nome]) coleta[g.nome] = [];
-  });
-
-  fs.writeFileSync('grupos.json', JSON.stringify(GRUPOS, null, 2), 'utf8');
-
-  console.log(`📋 ${GRUPOS.length} grupo(s) encontrado(s) — lista salva em grupos.json:\n`);
-  GRUPOS.forEach(g => console.log(`   • ${g.nome}`));
-  console.log('');
-}
-
-// ---------------------------------------------------------------------------
-// Ciclo de vida
-// ---------------------------------------------------------------------------
-
-const DURACAO_MS = 10 * 60 * 1000;
 
 function encerrar() {
-  console.log('\n⏱️  10 minutos encerrados. Salvando e encerrando...\n');
-  clearTimeout(salvarTimer);
+  console.log('\n✅ Coleta concluída. Salvando...\n');
   fs.writeFileSync(arquivo, JSON.stringify(coleta, null, 2), 'utf8');
 
+  const total = Object.values(coleta).reduce((s, m) => s + m.length, 0);
   console.log('📊 Resumo da coleta:');
-  GRUPOS.forEach(g => {
-    const total = (coleta[g.nome] || []).length;
-    console.log(`   ${g.nome}: ${total} mensagem(ns)`);
-  });
-  console.log(`\n💾 Arquivo salvo: ${arquivo}`);
-
-  client.destroy().finally(() => process.exit(0));
-}
-
-async function buscarHistorico() {
-  const limite24h = Date.now() - 24 * 60 * 60 * 1000;
-  let totalGeral = 0;
-
-  console.log('📥 Buscando histórico das últimas 24h...\n');
-
-  for (const grupo of GRUPOS) {
-    try {
-      const chat = await client.getChatById(grupo.id);
-      const msgs = await chat.fetchMessages({ limit: 500 });
-
-      const validas = msgs.filter(msg =>
-        !msg.fromMe &&
-        (msg.body || '').trim() &&
-        msg.timestamp * 1000 >= limite24h
-      );
-
-      const idsUnicos = [...new Set(validas.map(m => m.author || m._data?.author).filter(Boolean))];
-      await Promise.all(idsUnicos.map(id => resolverContato(id)));
-
-      const existentes = new Set(coleta[grupo.nome].map(chave));
-      let adicionadas = 0;
-
-      for (const msg of validas) {
-        const authorId = msg.author || msg._data?.author;
-        const { nome, telefone } = await resolverContato(authorId);
-        const texto = (msg.body || '').trim();
-        const hora = new Date(msg.timestamp * 1000).toLocaleString('pt-BR');
-        const empreendimento = extrairEmpreendimento(texto);
-        const entrada = { de: nome, telefone, texto, hora, empreendimento, grupo: grupo.nome };
-
-        if (existentes.has(chave(entrada))) continue;
-        coleta[grupo.nome].push(entrada);
-        existentes.add(chave(entrada));
-        adicionadas++;
-        totalGeral++;
-      }
-
-      console.log(`   ${grupo.nome}: ${adicionadas} mensagem(ns) do histórico`);
-    } catch (err) {
-      console.error(`   ✗ Erro em ${grupo.nome}: ${err.message}`);
-    }
+  for (const [grupo, msgs] of Object.entries(coleta)) {
+    if (msgs.length > 0) console.log(`   ${grupo}: ${msgs.length} mensagem(ns)`);
   }
+  console.log(`\n📦 Total: ${total} mensagem(ns)`);
+  console.log(`💾 Arquivo salvo: ${arquivo}`);
 
-  if (totalGeral > 0) salvar();
-  console.log(`\n📦 Total do histórico carregado: ${totalGeral} mensagem(ns)\n`);
+  fs.writeFileSync(arquivoUltimaColeta, JSON.stringify({ ultima: new Date().toISOString() }, null, 2), 'utf8');
+  console.log(`🕐 Referência salva em: ${arquivoUltimaColeta}`);
 }
 
 // ---------------------------------------------------------------------------
-// Cliente WhatsApp
+// Cliente WhatsApp Web
 // ---------------------------------------------------------------------------
 
 const client = new Client({
-  authStrategy: new LocalAuth({ dataPath: 'sessao' }),
-  takeoverOnConflict: true,
-  takeoverTimeoutMs: 10000,
+  authStrategy: new LocalAuth({ dataPath: 'sessao_wweb' }),
   puppeteer: {
-    executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  },
+    executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+  }
 });
 
-client.on('qr', (qr) => {
-  console.log('\n📱 Escaneie o QR code com o WhatsApp do número dedicado:\n');
-  qrcode.generate(qr, { small: true });
-});
-
-client.on('loading_screen', (percent, message) => {
-  console.log(`⏳ Carregando... ${percent}% — ${message}`);
+client.on('qr', async (qr) => {
+  await QRCode.toFile('qr_matchzap.png', qr, { width: 400, margin: 2 });
+  console.log('\n📱 Escaneie qr_matchzap.png com o WhatsApp do MatchZap\n');
+  exec('start qr_matchzap.png');
 });
 
 client.on('authenticated', () => console.log('🔑 Autenticado.'));
 
+let jaColetou = false;
+
+client.on('ready', async () => {
+  if (jaColetou) return; // impede re-fetch em reconexão automática
+  jaColetou = true;
+  console.log('✅ Conectado.\n');
+  console.log(`⏱️  Período: ${origemLimite}\n`);
+
+  // Descobre grupos
+  console.log('🔍 Buscando grupos participantes...\n');
+  const chats = await client.getChats();
+  const grupos = chats.filter(c => c.isGroup);
+
+  const groupList = grupos
+    .map(g => ({ id: g.id._serialized, nome: g.name }))
+    .sort((a, b) => a.nome.localeCompare(b.nome));
+  fs.writeFileSync('grupos.json', JSON.stringify(groupList, null, 2), 'utf8');
+
+  console.log(`📋 ${grupos.length} grupo(s) encontrado(s):\n`);
+  grupos.forEach(g => console.log(`   • ${g.name}`));
+  console.log('');
+
+  // Busca histórico de cada grupo
+  console.log('📚 Buscando histórico de mensagens...\n');
+  for (const grupo of grupos) {
+    process.stdout.write(`   ⬇️  ${grupo.name}... `);
+    try {
+      const msgs = await grupo.fetchMessages({ limit: 1000 });
+      for (const msg of msgs) {
+        processarMensagem(msg, grupo.name);
+      }
+      const count = coleta[grupo.name]?.length || 0;
+      console.log(`${count} mensagem(ns) no período`);
+    } catch (e) {
+      console.log(`⚠️  Erro: ${e.message}`);
+    }
+  }
+
+  // Fase de tempo real: 10 minutos
+  console.log('\n⏳ Aguardando 10 minutos para mensagens em tempo real...\n');
+  setTimeout(async () => {
+    encerrar();
+    await client.destroy();
+    process.exit(0);
+  }, 10 * 60 * 1000);
+});
+
+// Mensagens em tempo real
+client.on('message', async (msg) => {
+  if (!msg.from.endsWith('@g.us')) return;
+  try {
+    const chat = await msg.getChat();
+    processarMensagem(msg, chat.name);
+  } catch {}
+});
+
 client.on('auth_failure', (msg) => {
-  console.error('❌ Falha de autenticação:', msg);
+  console.error('❌ Auth failure:', msg);
   process.exit(1);
 });
 
-client.on('ready', async () => {
-  console.log('✅ Conectado.\n');
-  await inicializarGrupos();
-  await buscarHistorico();
-  console.log('👂 Capturando mensagens em tempo real por 10 minutos...\n');
-  setTimeout(encerrar, DURACAO_MS);
+client.on('disconnected', async (reason) => {
+  if (reason === 'LOGOUT') {
+    console.error('\n❌ Sessão expirada. Apague a pasta sessao_wweb e escaneie o QR code.');
+    process.exit(1);
+  }
 });
 
-client.on('disconnected', (reason) => {
-  console.log(`❌ Desconectado: ${reason}. Reiniciando...`);
-  client.initialize();
+client.initialize().catch(e => {
+  console.error('❌ Erro:', e.message);
+  process.exit(1);
 });
 
-client.on('message', async (msg) => {
-  if (!IDS_GRUPOS.includes(msg.from)) return;
-  if (msg.fromMe) return;
-
-  const texto = (msg.body || '').trim();
-  if (!texto) return;
-
-  const authorId = msg.author || msg._data?.author;
-  const { nome, telefone } = await resolverContato(authorId);
-  const hora = new Date(msg.timestamp * 1000).toLocaleString('pt-BR');
-  const nomeGrupoStr = nomeGrupo(msg.from);
-  const empreendimento = extrairEmpreendimento(texto);
-  const entrada = { de: nome, telefone, texto, hora, empreendimento, grupo: nomeGrupoStr };
-
-  coleta[nomeGrupoStr].push(entrada);
-  salvar();
-
-  console.log(`[${nomeGrupoStr}] ${nome}: ${texto.slice(0, 80)}`);
-});
-
-client.initialize();
+// Timeout de segurança: 1 hora
+setTimeout(() => {
+  console.log('\n⚠️  Timeout máximo atingido. Encerrando...');
+  encerrar();
+  process.exit(0);
+}, 60 * 60 * 1000);
