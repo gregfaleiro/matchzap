@@ -67,7 +67,11 @@ npm install
 |---|---|---|
 | `coletar.js` | ✅ whatsapp-web.js | Busca histórico (1000 msgs/grupo) + 10min tempo real |
 | `exportar.js` | ✅ OK | Filtra e exporta mensagens por período |
-| `fluxo.js` | ✅ OK | Orquestra coletar → exportar |
+| `filtrar.js` | ✅ OK | Classifica mensagens em ofertas vs buscas |
+| `atualizar_inventario.js` | ✅ OK | Merge filtrado_dia.json → inventario.json (15 dias, dedup) |
+| `gerar_relatorio.js` | ✅ OK | Cruza matches e gera index.html + relatorio_*.html |
+| `publicar.js` | ✅ OK | Git commit + push → Netlify |
+| `fluxo.js` | ✅ OK | Orquestra coletar → exportar → filtrar → inventário → relatório |
 | `gerar_qr.js` | 🗄️ Baileys (não usado) | Gerava QR para sessão Baileys |
 | `conectar.js` | 🗄️ Baileys (não usado) | Mantinha conexão Baileys ativa |
 | `diagnostico_modulos.js` | 🔧 Diagnóstico | Inspeciona módulos internos do WhatsApp Web |
@@ -115,6 +119,30 @@ node fluxo.js
       8. Lê coleta, filtra por data, remove duplicatas
       9. Salva exportacao_dia_YYYY-MM-DD_HH-mm.json
 ```
+
+---
+
+---
+
+## Atualizações — julho 2026
+
+### 22/07/2026 — Filtro de período nos matches + fluxo completo automatizado
+
+**O que mudou em `gerar_relatorio.js`:**
+- Adicionada barra de botões **Hoje / Semana / 15 dias** na aba Matches do relatório HTML
+- Cada card de match recebe atributo `data-ts` com o timestamp da busca (`ultimaVez`)
+- Filtragem client-side instantânea via `filtrarPeriodo()` — sem recarregar página
+- Contador de matches visíveis exibido ao lado dos botões
+- Padrão inicial: **15 dias** (comportamento anterior preservado)
+
+**Por que:** o cruzamento é feito sobre o inventário acumulado (15 dias), gerando ~1.690 matches.
+Os botões permitem focar em compradores ativos de hoje ou da semana, reduzindo o ruído.
+
+**Fluxo completo (`node fluxo.js`) confirmado funcional:**
+- 833 mensagens coletadas de 10 grupos
+- 418 ofertas + 95 buscas classificadas
+- Inventário: 926 ofertas | 227 buscas
+- 1.690 matches gerados (609 ALTO + 1.081 MÉDIO)
 
 ---
 

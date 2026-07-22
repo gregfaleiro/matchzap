@@ -338,9 +338,10 @@ function cardMatch(m, idx) {
   const destaque = idx === 0 && nivel === 'ALTO' ? '<div class="acao-imediata">⚡ AÇÃO IMEDIATA</div>' : '';
   const telO = o.tel ? `<div class="telefone">📞 ${esc(o.tel)}</div>` : '';
   const telB = b.tel ? `<div class="telefone">📞 ${esc(b.tel)}</div>` : '';
+  const bTs = b.ultimaVez ? new Date(b.ultimaVez).getTime() : 0;
 
   return `
-<div class="card-match nivel-${nivel.toLowerCase()}">
+<div class="card-match nivel-${nivel.toLowerCase()}" data-ts="${bTs}">
   ${destaque}
   <div class="card-header">
     ${badgeNivel(nivel)} ${badgeExtra(b, o)}
@@ -617,6 +618,13 @@ a{color:var(--teal);text-decoration:none}
 .buscar-empty b{display:block;color:var(--white);font-size:15px;margin-bottom:8px}
 .buscar-empty p{font-size:13px;line-height:1.7;margin:0}
 
+/* Período */
+.periodo-bar{display:flex;gap:8px;align-items:center;padding:14px 20px 0;flex-wrap:wrap}
+.periodo-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:7px 18px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.periodo-btn:hover{border-color:var(--teal);color:var(--teal)}
+.periodo-btn.active{background:var(--teal);border-color:var(--teal);color:#000;font-weight:700}
+.periodo-count{font-size:13px;color:var(--muted);margin-left:6px}
+
 /* Footer */
 .footer{text-align:center;padding:32px 20px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);margin-top:40px}
 
@@ -698,7 +706,15 @@ a{color:var(--teal);text-decoration:none}
 </div>
 
 <div id="matches" class="tab-content active">
-  ${matchCards || '<p class="vazio" style="padding:20px">Nenhum match encontrado no período.</p>'}
+  <div class="periodo-bar">
+    <button class="periodo-btn" onclick="filtrarPeriodo('hoje', this)">📅 Hoje</button>
+    <button class="periodo-btn" onclick="filtrarPeriodo('7d', this)">📅 Semana</button>
+    <button class="periodo-btn active" onclick="filtrarPeriodo('15d', this)">📅 15 dias</button>
+    <span id="periodo-count" class="periodo-count"></span>
+  </div>
+  <div id="matches-cards" style="padding:20px">
+    ${matchCards || '<p class="vazio">Nenhum match encontrado no período.</p>'}
+  </div>
 </div>
 
 <div id="demanda" class="tab-content">
@@ -1229,12 +1245,36 @@ function limparFiltros() {
   aplicarFiltros();
 }
 
+// ── Filtro de período nos matches ────────────────────────────────────────────
+function filtrarPeriodo(p, el) {
+  document.querySelectorAll('.periodo-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const agora = Date.now();
+  const hojeInicio = new Date(); hojeInicio.setHours(0, 0, 0, 0);
+  const semanaInicio = agora - 7 * 24 * 60 * 60 * 1000;
+  const cards = document.querySelectorAll('#matches-cards .card-match');
+  let vis = 0;
+  cards.forEach(c => {
+    const ts = parseInt(c.dataset.ts || '0');
+    let show;
+    if (p === 'hoje')      show = ts >= hojeInicio.getTime();
+    else if (p === '7d')   show = ts >= semanaInicio;
+    else                   show = true; // 15 dias = tudo
+    c.style.display = show ? '' : 'none';
+    if (show) vis++;
+  });
+  const label = p === 'hoje' ? 'hoje' : p === '7d' ? 'últimos 7 dias' : 'últimos 15 dias';
+  document.getElementById('periodo-count').textContent = vis + ' match' + (vis !== 1 ? 'es' : '') + ' — ' + label;
+}
+
 // Enter no textarea não submete — Ctrl+Enter executa
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('buscar-input').addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.ctrlKey) executarBusca();
   });
   initFiltrar();
+  // Inicializa contador do período padrão (15 dias)
+  filtrarPeriodo('15d', document.querySelector('.periodo-btn.active'));
 });
 </script>
 </body>
