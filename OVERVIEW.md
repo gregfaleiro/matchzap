@@ -1,6 +1,6 @@
 # MatchZap — Visão Geral do Projeto
 
-**Relatório ao vivo:** https://venerable-figolla-8336dd.netlify.app  
+**Relatório ao vivo:** https://gregfaleiro.github.io/matchzap/  
 **Repositório:** https://github.com/gregfaleiro/matchzap
 
 ---
@@ -69,7 +69,7 @@ Etapas internas:
 6. PUBLICAR (node publicar.js — separado)
    → git commit + push
    → Netlify publica em ~30 segundos
-   → URL: https://venerable-figolla-8336dd.netlify.app
+   → URL: https://gregfaleiro.github.io/matchzap/
 ```
 
 ---

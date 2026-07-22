@@ -55,4 +55,4 @@ const env = fs.existsSync(path.join(dir, '.env'))
         .map(l => l.split('='))
     )
   : {};
-console.log(`   ${env.NETLIFY_URL || 'https://venerable-figolla-8336dd.netlify.app'}\n`);
+console.log(`   ${env.GITHUB_PAGES_URL || 'https://gregfaleiro.github.io/matchzap/'}\n`);
