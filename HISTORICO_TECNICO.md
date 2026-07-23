@@ -1,4 +1,4 @@
-# MatchZap — Histórico Técnico
+# NexuHunt — Histórico Técnico
 
 ## O que aconteceu (julho 2026)
 
@@ -70,7 +70,7 @@ npm install
 | `filtrar.js` | ✅ OK | Classifica mensagens em ofertas vs buscas |
 | `atualizar_inventario.js` | ✅ OK | Merge filtrado_dia.json → inventario.json (15 dias, dedup) |
 | `gerar_relatorio.js` | ✅ OK | Cruza matches e gera index.html + relatorio_*.html |
-| `publicar.js` | ✅ OK | Git commit + push → Netlify |
+| `publicar.js` | ✅ OK | Git commit + push → GitHub Pages |
 | `fluxo.js` | ✅ OK | Orquestra coletar → exportar → filtrar → inventário → relatório |
 | `gerar_qr.js` | 🗄️ Baileys (não usado) | Gerava QR para sessão Baileys |
 | `conectar.js` | 🗄️ Baileys (não usado) | Mantinha conexão Baileys ativa |
@@ -79,7 +79,7 @@ npm install
 ## Sessões
 - `sessao/` — sessão Baileys (pode manter, não interfere)
 - `sessao_wweb/` — sessão whatsapp-web.js (Chrome profile)
-- **Na primeira execução:** pede QR para escanear com o WhatsApp do MatchZap
+- **Na primeira execução:** pede QR para escanear com o WhatsApp do NexuHunt
 - **Execuções seguintes:** autentica automaticamente (sessão persistente)
 
 ---
@@ -126,7 +126,75 @@ node fluxo.js
 
 ## Atualizações — julho 2026
 
-### 22/07/2026 — Filtro de período nos matches + fluxo completo automatizado
+### 22/07/2026 — Renomeação, refinamento do matching, identidade de corretores
+
+#### Renomeação: MatchZap → NexuHunt
+- Nome antigo conflitava com outra ferramenta do mercado
+- Novo nome reflete a marca mãe (Nexu Imobiliário) e a função (hunt = caça oportunidades)
+- Atualizado em: `gerar_relatorio.js`, `package.json`, `coletar.js`, `rodar_fluxo.bat`, `agendar_tarefa.ps1`, documentação
+- Logo no relatório: `MZ` → `NH`
+- Tarefa agendada: "MatchZap Diario" → "NexuHunt Diario"
+
+#### Migração Netlify → GitHub Pages
+- Netlify esgotou os créditos operacionais gratuitos
+- Repositório tornado público (`gh repo edit --visibility public`)
+- GitHub Pages habilitado via API (`gh api .../pages`)
+- URL mantida: `https://gregfaleiro.github.io/matchzap/`
+- `publicar.js` atualizado para referenciar a nova URL
+
+#### UX do relatório (renderização client-side)
+- Cards de match migrados de server-side (HTML pré-renderizado) para client-side (DS_MATCHES JSON compacto)
+- Filtros por período: **Hoje / Semana / 15 dias** — stats e contagem atualizam instantaneamente
+- Paginação: 50 cards por vez + botão "Ver mais"
+- Badge de recência por card: 🟢 hoje, 🟡 ontem, 🟠 X dias
+- Separador visual ALTO → MÉDIO na listagem
+- Texto longo colapsado com "Ver mais / Ver menos"
+- Telefone com link WhatsApp e botão copiar
+
+#### Refinamento do algoritmo de matching
+Problema: 1.690 matches com falsos positivos evidentes (ex: busca R$ 2.8M × oferta R$ 1.45M aparecia como match).
+
+Causa raiz: dois bugs no `calcScore()`:
+1. Bloqueador de área mínima usava 90% da área declarada (`< b.area * 0.90`) — deveria ser o valor exato
+2. Lower bound de preço era 50% do orçamento — muito permissivo
+
+Correções aplicadas em `gerar_relatorio.js`:
+
+| Parâmetro | Antes | Depois |
+|---|---|---|
+| Valor inferior | < 50% do orçamento | < **70%** do orçamento |
+| Valor superior | > 120% do orçamento | > **115%** do orçamento |
+| Área máx. diferença | fator **1.7x** (70%) | fator **1.35x** (35%) |
+| Área mínima declarada | oferta < 90% do mínimo | oferta < **100%** do mínimo |
+| Score mínimo MÉDIO | ≥ 4 | ≥ **5** |
+| Score mínimo ALTO | ≥ 5 | ≥ **6** |
+
+Resultado: **1.690 → 354 matches** (−79%), com qualidade significativamente maior.
+
+#### Identidade de corretores (nomes e telefones)
+Problema: WhatsApp usa IDs internos `@lid` (ex: `128050322792448`) nos grupos modernos — não são telefones reais.
+
+Soluções implementadas:
+
+**`coletar.js`:**
+- `processarMensagem` tornou-se `async`
+- Adicionado `getContactInfo()` com cache por autor → chama `msg.getContact()` para obter o `pushname` real
+- Adicionado `extrairTelDoTexto()` → regex para extrair telefone brasileiro (10–11 dígitos) do corpo da mensagem
+- LIDs não são mais armazenados como telefone (campo fica vazio)
+
+**`gerar_relatorio.js`:**
+- Adicionadas funções `resolverNome()` e `resolverTel()` no enriquecimento server-side
+- Campos `nomeExibir` e `telExibir` adicionados a todos os itens de busca e oferta
+- `_telHtml()` reescrito: LIDs (>13 dígitos) retornam vazio; números 10–11 dígitos ganham `+55` e link `wa.me`
+- Cards mostram "Corretor" no lugar de IDs numéricos longos
+
+#### Automação diária
+- Criada tarefa agendada **"NexuHunt Diario"** no Agendador de Tarefas do Windows
+- Horário: **08:00** todos os dias
+- Executa `rodar_fluxo.bat` → fluxo completo + publicação automática
+- `agendar_tarefa.ps1` atualizado com o novo nome
+
+### 22/07/2026 (início do dia) — Filtro de período nos matches + fluxo completo automatizado
 
 **O que mudou em `gerar_relatorio.js`:**
 - Adicionada barra de botões **Hoje / Semana / 15 dias** na aba Matches do relatório HTML
