@@ -15,7 +15,8 @@ function cabecalho(texto) {
 // ── ETAPA 1: Coletar ──────────────────────────────
 if (!skipColetar) {
   cabecalho('📱 Coletando mensagens do WhatsApp...');
-  execSync('node coletar.js', { stdio: 'inherit', cwd: dir });
+  const coletar_args = args.includes('--com-tempo-real') ? '' : '--rapido';
+  execSync(`node coletar.js ${coletar_args}`, { stdio: 'inherit', cwd: dir });
 } else {
   console.log('\n⏭️  Coleta ignorada (--sem-coletar)');
 }

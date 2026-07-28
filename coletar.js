@@ -5,6 +5,8 @@ const fs   = require('fs');
 const path = require('path');
 require('dotenv').config();
 
+const MODO_RAPIDO = process.argv.includes('--rapido');
+
 const arquivo = `coleta_${new Date().toISOString().slice(0, 10)}.json`;
 const arquivoUltimaColeta = 'ultima_coleta.json';
 
@@ -252,7 +254,14 @@ client.on('ready', async () => {
     }
   }
 
-  // Fase de tempo real: 10 minutos com contador regressivo
+  // Fase de tempo real (ignorada no modo --rapido)
+  if (MODO_RAPIDO) {
+    console.log('\n⚡ Modo rápido — sem espera em tempo real.');
+    encerrar();
+    await client.destroy();
+    process.exit(0);
+  }
+
   const TEMPO_REAL_MS = 10 * 60 * 1000;
   const inicioTempoReal = Date.now();
   process.stdout.write('\n⏳ Aguardando 10 minutos para mensagens em tempo real...\n\n');
