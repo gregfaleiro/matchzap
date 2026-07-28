@@ -1070,7 +1070,7 @@ a{color:var(--teal);text-decoration:none}
 <div class="header">
   <div class="logo">NH</div>
   <div class="header-meta">
-    <b>${dataStr} · ${horaStr}</b> &nbsp;·&nbsp; 10 grupos monitorados
+    <b>${dataStr} · ${horaStr}</b> &nbsp;·&nbsp; ${ofertas.length} ofertas monitoradas
   </div>
   ${dropdownHistorico()}
   <span id="wa-dot" class="wa-status-dot" title="Verificando WhatsApp sender..."></span>
@@ -1241,7 +1241,7 @@ a{color:var(--teal);text-decoration:none}
 </div>
 
 <div class="footer">
-  Gerado por NexuHunt · ${dataStr} ${horaStr} · ${ofertas.length + buscas.length} mensagens de 10 grupos do WhatsApp
+  Gerado por NexuHunt · ${dataStr} ${horaStr} · ${ofertas.length} ofertas · ${buscas.length} buscas no inventário
 </div>
 
 <script>
