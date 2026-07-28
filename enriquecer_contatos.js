@@ -23,16 +23,7 @@ function eLid(str) {
   return /^\d{14,}$/.test(String(str || '').replace(/[^0-9]/g, ''));
 }
 
-function extrairTelDoTexto(txt) {
-  const ms = txt.match(/(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)(?:9\s?)?\d{4}[\s.\-]?\d{4}/g);
-  if (!ms) return '';
-  for (const m of ms) {
-    const d = m.replace(/[^0-9]/g, '');
-    const num = (d.startsWith('55') && d.length > 11) ? d.slice(2) : d;
-    if (num.length >= 10 && num.length <= 11) return num;
-  }
-  return '';
-}
+const { extrairTelDoTexto } = require('./utils');
 
 function extrairNomeDaAssinatura(txt) {
   const linhas = txt.split('\n').map(l => l.trim()).filter(Boolean);
