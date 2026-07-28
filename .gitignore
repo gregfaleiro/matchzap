@@ -22,3 +22,9 @@ modulos_diagnostico.json
 .wweb_diagnostics/
 .claude/
 .env
+contatos_ricos.json
+snapshot_mercado.json
+matches_enviados.json
+sessao_servidor/
+relatorio_*.html
+exportar_conversa.json
