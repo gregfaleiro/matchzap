@@ -20,7 +20,13 @@ if (!fs.existsSync(ARQUIVO_FILTRADO)) {
 // Carrega inventário existente (ou começa do zero)
 let inv = { ofertas: [], buscas: [] };
 if (fs.existsSync(ARQUIVO_INV)) {
-  inv = JSON.parse(fs.readFileSync(ARQUIVO_INV, 'utf8'));
+  try {
+    inv = JSON.parse(fs.readFileSync(ARQUIVO_INV, 'utf8'));
+  } catch (e) {
+    console.error(`❌ inventario.json corrompido: ${e.message}`);
+    console.error('   Restaure o backup em OneDrive/nexuhunt/inventario.json');
+    process.exit(1);
+  }
   // Garante campos obrigatórios em registros antigos sem metadados
   for (const cat of [inv.ofertas, inv.buscas]) {
     for (const m of cat) {
@@ -32,7 +38,13 @@ if (fs.existsSync(ARQUIVO_INV)) {
 }
 
 // Carrega coleta classificada do dia
-const filtrado = JSON.parse(fs.readFileSync(ARQUIVO_FILTRADO, 'utf8'));
+let filtrado;
+try {
+  filtrado = JSON.parse(fs.readFileSync(ARQUIVO_FILTRADO, 'utf8'));
+} catch (e) {
+  console.error(`❌ filtrado_dia.json corrompido: ${e.message}`);
+  process.exit(1);
+}
 
 const agora      = new Date().toISOString();
 const limite15d  = Date.now() - DIAS_EXPIRACAO * 24 * 60 * 60 * 1000;
@@ -89,7 +101,9 @@ inv.ofertas = mergeCat(inv.ofertas || [], filtrado.ofertas || []);
 inv.buscas  = mergeCat(inv.buscas  || [], filtrado.buscas  || []);
 inv.atualizadoEm = agora;
 
-fs.writeFileSync(ARQUIVO_INV, JSON.stringify(inv, null, 2), 'utf8');
+const ARQUIVO_TMP = ARQUIVO_INV + '.tmp';
+fs.writeFileSync(ARQUIVO_TMP, JSON.stringify(inv, null, 2), 'utf8');
+fs.renameSync(ARQUIVO_TMP, ARQUIVO_INV);
 
 console.log(`📦 Inventário atualizado:`);
 console.log(`   ✅ Novos       : ${adicionados}`);

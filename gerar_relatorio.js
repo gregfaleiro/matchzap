@@ -12,6 +12,10 @@ const ofertas = dadosCarregados.ofertas || [];
 const buscas  = dadosCarregados.buscas  || [];
 console.log(`📊 Fonte: ${arquivoDados} — Ofertas: ${ofertas.length} | Buscas: ${buscas.length}`);
 
+const CONTATOS_RICOS = fs.existsSync('contatos_ricos.json')
+  ? JSON.parse(fs.readFileSync('contatos_ricos.json', 'utf8'))
+  : {};
+
 // ── Helpers de extração ────────────────────────────────────────────────────
 
 const SETORES_GO = [
@@ -94,7 +98,7 @@ function extrairAreaMin(txt) {
 function extrairTipo(txt) {
   const t = txt.toLowerCase();
   if (/fazenda|s[íi]tio|ch[áa]cara|haras|rural/.test(t))            return 'rural';
-  if (/\[áa]rea\s+(urbana|rural|industrial|incorpor|gleba)|gleba/.test(t)) return 'area';
+  if (/[áa]rea\s+(urbana|rural|industrial|incorpor|gleba)|gleba/.test(t)) return 'area';
   if (/\bterreno\b/.test(t))                                          return 'terreno';
   if (/\blote\b/.test(t))                                             return 'lote';
   if (/galp[aã]o|shed|industrial/.test(t))                           return 'comercial';
@@ -114,20 +118,56 @@ function aVista(txt) {
   return /[àa]\s*vista|cash|recursos\s+pr[oó]prios/i.test(txt);
 }
 
+function extrairTelDoTexto(txt) {
+  const matches = txt.match(/(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)(?:9\s?)?\d{4}[\s.\-]?\d{4}/g);
+  if (!matches) return '';
+  for (const m of matches) {
+    const d = m.replace(/[^0-9]/g, '');
+    const num = (d.startsWith('55') && d.length > 11) ? d.slice(2) : d;
+    if (num.length >= 10 && num.length <= 11) return num;
+  }
+  return '';
+}
+
+function resolverTel(tel, txt) {
+  // Lookup no dicionário de contatos enriquecidos
+  if (tel && CONTATOS_RICOS[tel] && CONTATOS_RICOS[tel].tel) return CONTATOS_RICOS[tel].tel;
+  if (!tel) return extrairTelDoTexto(txt);
+  const d = String(tel).replace(/[^0-9]/g, '');
+  if (d.length > 13) return extrairTelDoTexto(txt); // LID — não é telefone real
+  return tel;
+}
+
+const NOME_RUIM = /R\$|\d{5,}|m²|quarto|suite|suíte|setor|busco|vendo|ofert|panorâmico|elevador|garden|park|vista|home|life|residenci|towers?|plaza|square|prive|privê|ville|condomínio|cond\.|microondas|brastemp|lavabo|andar|vaga|garagem|lazer|piscina|churras/i;
+
+function resolverNome(de, tel) {
+  if (tel && CONTATOS_RICOS[tel] && CONTATOS_RICOS[tel].nome) {
+    const n = CONTATOS_RICOS[tel].nome;
+    if (!NOME_RUIM.test(n)) return n;
+  }
+  if (!de) return '';
+  if (/^\d{10,}$/.test(String(de).trim())) return '';
+  if (NOME_RUIM.test(de)) return '';
+  return de;
+}
+
 // ── Enriquecer dados ───────────────────────────────────────────────────────
 
 function enriquecerOferta(o) {
   const t = o.txt || '';
   return {
     ...o,
-    setores: extrairSetores(t),
-    valor:   extrairValor(t),
-    suites:  extrairSuites(t),
-    quartos: extrairQuartos(t),
-    area:    extrairArea(t),
-    tipo:    extrairTipo(t),
-    urgente: urgente(t),
-    permuta: permuta(t),
+    setores:    extrairSetores(t),
+    valor:      extrairValor(t),
+    suites:     extrairSuites(t),
+    quartos:    extrairQuartos(t),
+    area:       extrairArea(t),
+    tipo:       extrairTipo(t),
+    urgente:    urgente(t),
+    permuta:    permuta(t),
+    telExibir:  resolverTel(o.tel || '', t),
+    nomeExibir: resolverNome(o.de || '', o.tel || ''),
+    lidRaw:     o.tel || '',
   };
 }
 
@@ -135,15 +175,18 @@ function enriquecerBusca(b) {
   const t = b.txt || '';
   return {
     ...b,
-    setores:  extrairSetores(t),
-    orcamento: extrairValor(t),
-    suites:   extrairSuites(t),
-    quartos:  extrairQuartos(t),
-    area:     extrairArea(t),
-    areaMin:  extrairAreaMin(t),
-    tipo:     extrairTipo(t),
-    urgente:  urgente(t),
-    permuta:  permuta(t),
+    setores:    extrairSetores(t),
+    orcamento:  extrairValor(t),
+    suites:     extrairSuites(t),
+    quartos:    extrairQuartos(t),
+    area:       extrairArea(t),
+    areaMin:    extrairAreaMin(t),
+    tipo:       extrairTipo(t),
+    urgente:    urgente(t),
+    permuta:    permuta(t),
+    telExibir:  resolverTel(b.tel || '', t),
+    nomeExibir: resolverNome(b.de || '', b.tel || ''),
+    lidRaw:     b.tel || '',
     aVista:   aVista(t),
   };
 }
@@ -186,10 +229,10 @@ function calcScore(b, o) {
   const setorStatus = setoresCoincide(b.setores, o.setores);
   if (setorStatus === false) return { score: 0, razoes }; // ambos têm, não coincidem
 
-  // ── BLOQUEADOR 3: Valor com diferença > 20% ─────────────────────────────
+  // ── BLOQUEADOR 3: Valor com diferença > 20% (ou oferta < 70% do orçamento) ─
   if (b.orcamento > 0 && o.valor > 0) {
     const ratio = o.valor / b.orcamento;
-    if (ratio > 1.20 || ratio < 0.50) return { score: 0, razoes };
+    if (ratio > 1.15 || ratio < 0.70) return { score: 0, razoes };
   }
 
   // ── BLOQUEADOR 4: Cômodos incompatíveis (diferença > 1) ─────────────────
@@ -197,15 +240,15 @@ function calcScore(b, o) {
   const oCom = o.suites > 0 ? o.suites : o.quartos;
   if (bCom > 0 && oCom > 0 && Math.abs(bCom - oCom) > 1) return { score: 0, razoes };
 
-  // ── BLOQUEADOR 5: Área muito discrepante (> 70% de diferença) ───────────
+  // ── BLOQUEADOR 5: Área muito discrepante (> 35% de diferença) ───────────
   if (b.area > 0 && o.area > 0) {
     const menor = Math.min(b.area, o.area);
     const maior = Math.max(b.area, o.area);
-    if (maior / menor > 1.7) return { score: 0, razoes };
+    if (maior / menor > 1.35) return { score: 0, razoes };
   }
 
   // ── BLOQUEADOR 5b: Área mínima declarada ("acima de Xm") não atingida ───
-  if (b.areaMin && b.area > 0 && o.area > 0 && o.area < b.area * 0.90) return { score: 0, razoes };
+  if (b.areaMin && b.area > 0 && o.area > 0 && o.area < b.area) return { score: 0, razoes };
 
   // ── BLOQUEADOR 6: Impossibilidade física — imóvel pequeno × muitos cômodos
   if (o.area > 0 && o.area < 65 && (b.suites >= 2 || b.quartos >= 3)) return { score: 0, razoes };
@@ -276,11 +319,11 @@ const parVisto = new Set();
 for (const b of buscasParaMatch) {
   for (const o of ofertasUniq) {
     const { score, razoes } = calcScore(b, o);
-    if (score < 4) continue;
+    if (score < 5) continue;
     const parKey = (b.txt || '') + '|||' + (o.txt || '');
     if (parVisto.has(parKey)) continue;
     parVisto.add(parKey);
-    const nivel = score >= 5 ? 'ALTO' : 'MÉDIO';
+    const nivel = score >= 6 ? 'ALTO' : 'MÉDIO';
     matches.push({ busca: b, oferta: o, nivel, score, razoes });
   }
 }
@@ -296,6 +339,19 @@ matches.sort((a, b) => {
   const rb = Math.max(recenciaMs(b.busca), recenciaMs(b.oferta));
   return rb - ra;
 });
+
+// Índice compacto para renderização client-side
+const buscaIdxMap = new Map();
+buscasRich.forEach((b, i) => { const k=(b.de||'')+'||'+(b.txt||''); if(!buscaIdxMap.has(k)) buscaIdxMap.set(k,i); });
+const ofertaIdxMap = new Map();
+ofertasRich.forEach((o, i) => { const k=(o.de||'')+'||'+(o.txt||''); if(!ofertaIdxMap.has(k)) ofertaIdxMap.set(k,i); });
+const matchesCompact = matches.map(m => {
+  const bi = buscaIdxMap.get((m.busca.de||'')+'||'+(m.busca.txt||''));
+  const oi = ofertaIdxMap.get((m.oferta.de||'')+'||'+(m.oferta.txt||''));
+  if (bi === undefined || oi === undefined) return null;
+  return { b: bi, o: oi, n: m.nivel, s: m.score, r: m.razoes,
+           ts: m.busca.ultimaVez ? new Date(m.busca.ultimaVez).getTime() : 0 };
+}).filter(Boolean);
 
 const totalAlto  = matches.filter(m => m.nivel === 'ALTO').length;
 const totalMedio = matches.filter(m => m.nivel === 'MÉDIO').length;
@@ -333,51 +389,7 @@ function badgeExtra(b, o) {
   return out;
 }
 
-function cardMatch(m, idx) {
-  const { busca: b, oferta: o, nivel, razoes } = m;
-  const destaque = idx === 0 && nivel === 'ALTO' ? '<div class="acao-imediata">⚡ AÇÃO IMEDIATA</div>' : '';
-  const telO = o.tel ? `<div class="telefone">📞 ${esc(o.tel)}</div>` : '';
-  const telB = b.tel ? `<div class="telefone">📞 ${esc(b.tel)}</div>` : '';
-  const bTs = b.ultimaVez ? new Date(b.ultimaVez).getTime() : 0;
-
-  return `
-<div class="card-match nivel-${nivel.toLowerCase()}" data-ts="${bTs}">
-  ${destaque}
-  <div class="card-header">
-    ${badgeNivel(nivel)} ${badgeExtra(b, o)}
-    <span class="match-razao">↔ ${razoes.join(' · ')}</span>
-  </div>
-  <div class="card-body">
-    <div class="lado busca-lado">
-      <div class="lado-label">🔍 BUSCA</div>
-      <div class="corretor">${esc(b.de || 'Corretor não identificado')}</div>
-      <div class="horario">${esc(b.hora)}</div>
-      <div class="grupo-tag">📍 ${esc(b.g || b.grupo)}</div>
-      ${telB}
-      <div class="divider"></div>
-      <div class="detalhe"><b>Tipo:</b> ${esc(b.tipo)} ${b.quartos ? b.quartos + ' qtos' : ''} ${b.area ? b.area + 'm²' : ''}</div>
-      ${b.setor ? `<div class="detalhe"><b>Região:</b> ${esc(b.setor)}</div>` : ''}
-      ${b.orcamento ? `<div class="detalhe"><b>Orçamento:</b> ${fmtValor(b.orcamento)}</div>` : ''}
-      <div class="txt-original">${esc(b.txt.slice(0,150))}${b.txt.length>150?'…':''}</div>
-    </div>
-    <div class="lado oferta-lado">
-      <div class="lado-label">🏠 OFERTA</div>
-      <div class="corretor">${esc(o.de || 'Corretor não identificado')}</div>
-      <div class="horario">${esc(o.hora)}</div>
-      <div class="grupo-tag">📍 ${esc(o.g || o.grupo)}</div>
-      ${telO}
-      <div class="divider"></div>
-      ${o.emp ? `<div class="empreendimento">${esc(o.emp)}</div>` : ''}
-      ${o.setor ? `<div class="detalhe"><b>Localização:</b> ${esc(o.setor)}</div>` : ''}
-      <div class="detalhe">
-        ${o.area ? `<b>Área:</b> ${o.area}m² · ` : ''}${o.quartos ? `<b>Qtos:</b> ${o.quartos} · ` : ''}
-      </div>
-      ${o.valor ? `<div class="valor">${fmtValor(o.valor)}</div>` : ''}
-      <div class="txt-original">${esc(o.txt.slice(0,150))}${o.txt.length>150?'…':''}</div>
-    </div>
-  </div>
-</div>`;
-}
+// Cards renderizados client-side via DS_MATCHES (ver script no HTML)
 
 // ── Aba Demanda ─────────────────────────────────────────────────────────────
 
@@ -446,6 +458,52 @@ function alertas() {
 let historico = [];
 try { historico = JSON.parse(fs.readFileSync('historico.json', 'utf8')); } catch {}
 
+// ── Inteligência de mercado ────────────────────────────────────────────────
+
+const mSetores = {};
+ofertasRich.forEach(o => {
+  (o.setores.length ? o.setores : []).forEach(s => {
+    if (!mSetores[s]) mSetores[s] = { o: 0, b: 0 };
+    mSetores[s].o++;
+  });
+});
+buscasRich.forEach(b => {
+  (b.setores.length ? b.setores : []).forEach(s => {
+    if (!mSetores[s]) mSetores[s] = { o: 0, b: 0 };
+    mSetores[s].b++;
+  });
+});
+const setoresRanking = Object.entries(mSetores)
+  .map(([nome, v]) => ({ nome, ...v }))
+  .sort((a, b) => b.b - a.b)
+  .slice(0, 20);
+
+const mTipos = {};
+const NOMES_TIPOS = { apartamento:'Apartamento', casa:'Casa', terreno:'Terreno', lote:'Lote', rural:'Rural/Fazenda', comercial:'Comercial', area:'Área/Gleba' };
+ofertasRich.forEach(o => { const t = o.tipo||'apartamento'; if (!mTipos[t]) mTipos[t]={o:0,b:0}; mTipos[t].o++; });
+buscasRich.forEach(b => { const t = b.tipo||'apartamento'; if (!mTipos[t]) mTipos[t]={o:0,b:0}; mTipos[t].b++; });
+
+function nomeFaixa(v) {
+  if (!v || v < 100000) return null;
+  if (v < 500000)  return 'até 500k';
+  if (v < 800000)  return '500k–800k';
+  if (v < 1000000) return '800k–1M';
+  if (v < 1500000) return '1M–1,5M';
+  if (v < 2000000) return '1,5M–2M';
+  if (v < 3000000) return '2M–3M';
+  return 'acima 3M';
+}
+const ordemFaixas = ['até 500k','500k–800k','800k–1M','1M–1,5M','1,5M–2M','2M–3M','acima 3M'];
+const mFaixas = {};
+ofertasRich.forEach(o => { const f = nomeFaixa(o.valor);      if (f) { if (!mFaixas[f]) mFaixas[f]={o:0,b:0}; mFaixas[f].o++; } });
+buscasRich.forEach(b => { const f = nomeFaixa(b.orcamento);   if (f) { if (!mFaixas[f]) mFaixas[f]={o:0,b:0}; mFaixas[f].b++; } });
+const faixasData = ordemFaixas.filter(f => mFaixas[f]).map(f => ({ label: f, ...mFaixas[f] }));
+
+// Lê snapshot histórico de mercado
+const snapFile = path.join(__dirname, 'snapshot_mercado.json');
+let snapHist = [];
+try { snapHist = JSON.parse(fs.readFileSync(snapFile, 'utf8')); } catch {}
+
 function dropdownHistorico() {
   if (!historico.length) return '';
   const itens = historico.map(h =>
@@ -457,6 +515,216 @@ function dropdownHistorico() {
   </div>`;
 }
 
+function analisarSetor(nome) {
+  const of = ofertasRich.filter(o => o.setores.includes(nome));
+  const bs = buscasRich.filter(b => b.setores.includes(nome));
+
+  // Por tipo
+  const tipos = {};
+  of.forEach(o => { const t = o.tipo||'apartamento'; if (!tipos[t]) tipos[t]={o:0,b:0}; tipos[t].o++; });
+  bs.forEach(b => { const t = b.tipo||'apartamento'; if (!tipos[t]) tipos[t]={o:0,b:0}; tipos[t].b++; });
+
+  // Por faixa de valor
+  const faixas = {};
+  of.forEach(o => { const f = nomeFaixa(o.valor);    if (f) { if (!faixas[f]) faixas[f]={o:0,b:0}; faixas[f].o++; } });
+  bs.forEach(b => { const f = nomeFaixa(b.orcamento); if (f) { if (!faixas[f]) faixas[f]={o:0,b:0}; faixas[f].b++; } });
+
+  // Por cômodos
+  const comodos = {};
+  of.forEach(o => { const c = o.suites>0?o.suites+'s':o.quartos>0?o.quartos+'q':null; if(c){if(!comodos[c])comodos[c]={o:0,b:0};comodos[c].o++;} });
+  bs.forEach(b => { const c = b.suites>0?b.suites+'s':b.quartos>0?b.quartos+'q':null; if(c){if(!comodos[c])comodos[c]={o:0,b:0};comodos[c].b++;} });
+
+  // Estatísticas de preço (ofertas)
+  const valores = of.filter(o=>o.valor>0).map(o=>o.valor).sort((a,b)=>a-b);
+  const mediana = valores.length ? valores[Math.floor(valores.length/2)] : 0;
+  const minV    = valores[0] || 0;
+  const maxV    = valores[valores.length-1] || 0;
+
+  // Ticket médio das buscas
+  const orcs = bs.filter(b=>b.orcamento>0).map(b=>b.orcamento).sort((a,b)=>a-b);
+  const medianaOrc = orcs.length ? orcs[Math.floor(orcs.length/2)] : 0;
+
+  // Top empreendimentos
+  const emps = {};
+  of.forEach(o => { if (o.emp) emps[o.emp] = (emps[o.emp]||0)+1; });
+  const topEmps = Object.entries(emps).sort((a,b)=>b[1]-a[1]).slice(0,6);
+
+  // Condições especiais das buscas
+  const urgentes = bs.filter(b=>b.urgente).length;
+  const avista   = bs.filter(b=>b.aVista).length;
+  const permuta  = bs.filter(b=>b.permuta).length;
+
+  return { of, bs, tipos, faixas, comodos, mediana, minV, maxV, medianaOrc, topEmps, urgentes, avista, permuta };
+}
+
+function renderDetalheSetor(nome, an) {
+  const { of, bs, tipos, faixas, comodos, mediana, minV, maxV, medianaOrc, topEmps, urgentes, avista, permuta } = an;
+
+  // Mini-barras helper
+  function miniBar(v, max, cls) {
+    const w = Math.round(v / Math.max(max, 1) * 60);
+    return `<div class="mkt-bar-wrap"><div class="mkt-bar ${cls}" style="width:${Math.max(w,2)}px"></div><span>${v}</span></div>`;
+  }
+
+  // Tipologia
+  const maxTB = Math.max(...Object.values(tipos).map(v=>v.b), 1);
+  const maxTO = Math.max(...Object.values(tipos).map(v=>v.o), 1);
+  const tiposHtml = Object.entries(tipos).sort((a,b)=>b[1].b-a[1].b).map(([tipo, v]) =>
+    `<tr><td>${esc(NOMES_TIPOS[tipo]||tipo)}</td><td>${miniBar(v.b,maxTB,'mkt-busca')}</td><td>${miniBar(v.o,maxTO,'mkt-oferta')}</td></tr>`
+  ).join('');
+
+  // Faixas de valor
+  const faixasOrdenadas = ordemFaixas.filter(f => faixas[f]);
+  const maxFB2 = Math.max(...faixasOrdenadas.map(f=>faixas[f].b), 1);
+  const maxFO2 = Math.max(...faixasOrdenadas.map(f=>faixas[f].o), 1);
+  const faixasHtml = faixasOrdenadas.map(f =>
+    `<tr><td>${esc(f)}</td><td>${miniBar(faixas[f].b,maxFB2,'mkt-busca')}</td><td>${miniBar(faixas[f].o,maxFO2,'mkt-oferta')}</td></tr>`
+  ).join('') || `<tr><td colspan="3" style="color:var(--muted)">Valores não identificados</td></tr>`;
+
+  // Cômodos
+  const ordemCom = ['2q','3q','4q','1s','2s','3s','4s'];
+  const nomeCom  = {'2q':'2 quartos','3q':'3 quartos','4q':'4+ quartos','1s':'1 suíte','2s':'2 suítes','3s':'3 suítes','4s':'4+ suítes'};
+  const comodosOrdenados = ordemCom.filter(c=>comodos[c]);
+  const maxCB = Math.max(...comodosOrdenados.map(c=>comodos[c].b), 1);
+  const maxCO = Math.max(...comodosOrdenados.map(c=>comodos[c].o), 1);
+  const comodosHtml = comodosOrdenados.map(c =>
+    `<tr><td>${nomeCom[c]||c}</td><td>${miniBar(comodos[c].b,maxCB,'mkt-busca')}</td><td>${miniBar(comodos[c].o,maxCO,'mkt-oferta')}</td></tr>`
+  ).join('') || `<tr><td colspan="3" style="color:var(--muted)">Não identificado</td></tr>`;
+
+  // Preços
+  const precosHtml = mediana ? `
+    <div class="mkt-preco-row"><span>Mediana ofertas</span><span class="mkt-preco-val">${fmtValor(mediana)}</span></div>
+    <div class="mkt-preco-row"><span>Faixa ofertas</span><span style="color:var(--muted);font-size:12px">${fmtValor(minV)} – ${fmtValor(maxV)}</span></div>
+    ${medianaOrc ? `<div class="mkt-preco-row"><span>Orçamento mediano (buscas)</span><span style="color:var(--gold)">${fmtValor(medianaOrc)}</span></div>` : ''}
+  ` : '<div style="color:var(--muted);font-size:12px">Valores não identificados nas mensagens</div>';
+
+  // Empreendimentos
+  const empsHtml = topEmps.length
+    ? topEmps.map(([emp, cnt]) => `<span class="mkt-emp-tag">${esc(emp)}${cnt>1?' <b>('+cnt+'x)</b>':''}</span>`).join('')
+    : '<span style="color:var(--muted);font-size:12px">Nenhum identificado</span>';
+
+  // Condições especiais
+  const condHtml = [
+    urgentes ? `<span class="mkt-sinal mkt-alta-demanda">🚨 ${urgentes} urgente${urgentes>1?'s':''}</span>` : '',
+    avista   ? `<span class="mkt-sinal mkt-equilibrado">💵 ${avista} à vista</span>` : '',
+    permuta  ? `<span class="mkt-sinal mkt-alta-oferta">🔄 ${permuta} permuta</span>` : '',
+  ].filter(Boolean).join(' ');
+
+  return `
+  <div class="mkt-det-grid">
+    <div class="mkt-det-bloco">
+      <div class="mkt-det-titulo">Tipologia</div>
+      <table class="mkt-table"><thead><tr><th>Tipo</th><th style="color:var(--gold)">Buscas</th><th style="color:var(--teal)">Ofertas</th></tr></thead>
+      <tbody>${tiposHtml}</tbody></table>
+    </div>
+    <div class="mkt-det-bloco">
+      <div class="mkt-det-titulo">Faixa de Valor</div>
+      <table class="mkt-table"><thead><tr><th>Faixa</th><th style="color:var(--gold)">Buscas</th><th style="color:var(--teal)">Ofertas</th></tr></thead>
+      <tbody>${faixasHtml}</tbody></table>
+    </div>
+    <div class="mkt-det-bloco">
+      <div class="mkt-det-titulo">Cômodos</div>
+      <table class="mkt-table"><thead><tr><th>Config.</th><th style="color:var(--gold)">Buscas</th><th style="color:var(--teal)">Ofertas</th></tr></thead>
+      <tbody>${comodosHtml}</tbody></table>
+    </div>
+    <div class="mkt-det-bloco">
+      <div class="mkt-det-titulo">Preços</div>
+      <div class="mkt-preco-box">${precosHtml}</div>
+      ${condHtml ? `<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">${condHtml}</div>` : ''}
+    </div>
+  </div>
+  ${topEmps.length ? `<div style="margin-top:12px"><div class="mkt-det-titulo">Empreendimentos em oferta</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${empsHtml}</div></div>` : ''}`;
+}
+
+function tabMercado(mercadoHoje, snapHist) {
+  const t = mercadoHoje.totais;
+  const absorcao = t.ofertas > 0 ? (t.buscas / t.ofertas * 100).toFixed(0) : 0;
+
+  const statsHtml = `
+  <div class="mkt-stats">
+    <div class="mkt-stat"><div class="mkt-stat-num">${t.ofertas.toLocaleString('pt-BR')}</div><div class="mkt-stat-lbl">Ofertas</div></div>
+    <div class="mkt-stat"><div class="mkt-stat-num" style="color:var(--gold)">${t.buscas}</div><div class="mkt-stat-lbl">Buscas Ativas</div></div>
+    <div class="mkt-stat"><div class="mkt-stat-num" style="color:var(--alto)">${t.matchesAlto}</div><div class="mkt-stat-lbl">Matches Alto</div></div>
+    <div class="mkt-stat"><div class="mkt-stat-num">${absorcao}%</div><div class="mkt-stat-lbl">Índice Absorção</div></div>
+  </div>`;
+
+  // Análise por setor — cards expansíveis
+  const srs = mercadoHoje.setores;
+  const maxB = Math.max(...srs.map(s => s.b), 1);
+  const maxO = Math.max(...srs.map(s => s.o), 1);
+
+  const setoresCards = srs.map(s => {
+    const pressao = s.b / Math.max(s.o, 1);
+    let sinal, cls;
+    if (pressao > 0.5)  { sinal = '🔴 Alta demanda'; cls = 'mkt-alta-demanda'; }
+    else if (pressao > 0.2) { sinal = '🟡 Equilibrado'; cls = 'mkt-equilibrado'; }
+    else                { sinal = '🟢 Alta oferta';   cls = 'mkt-alta-oferta'; }
+    const bW = Math.round(s.b / maxB * 80);
+    const oW = Math.round(s.o / maxO * 80);
+
+    const an = analisarSetor(s.nome);
+    const det = renderDetalheSetor(s.nome, an);
+
+    return `<details class="mkt-setor-card">
+  <summary class="mkt-setor-sum">
+    <div class="mkt-setor-nome">${esc(s.nome)}</div>
+    <div class="mkt-setor-bars">
+      <div class="mkt-bar-wrap"><div class="mkt-bar mkt-busca" style="width:${bW}px"></div><span style="color:var(--gold)">${s.b} buscas</span></div>
+      <div class="mkt-bar-wrap"><div class="mkt-bar mkt-oferta" style="width:${oW}px"></div><span style="color:var(--teal)">${s.o} ofertas</span></div>
+    </div>
+    <span class="mkt-sinal ${cls}">${sinal}</span>
+    <span class="mkt-setor-arrow">▶</span>
+  </summary>
+  <div class="mkt-setor-det">${det}</div>
+</details>`;
+  }).join('');
+
+  // Tendências históricas
+  let histSection = '';
+  if (snapHist.length > 1) {
+    const ultimos = snapHist.slice(-14).reverse();
+    const histRows = ultimos.map((s, i) => {
+      const prev = ultimos[i + 1];
+      function trend(cur, prv) {
+        if (prv == null) return '';
+        const d = cur - prv;
+        if (d > 0) return ' <span style="color:var(--alto);font-size:11px">▲' + d + '</span>';
+        if (d < 0) return ' <span style="color:#E05252;font-size:11px">▼' + Math.abs(d) + '</span>';
+        return '';
+      }
+      const dFmt = s.data.slice(5).replace('-', '/');
+      return '<tr><td style="color:var(--muted);font-size:12px">' + dFmt + '</td>' +
+        '<td>' + s.totais.ofertas + trend(s.totais.ofertas, prev?.totais.ofertas) + '</td>' +
+        '<td>' + s.totais.buscas  + trend(s.totais.buscas,  prev?.totais.buscas)  + '</td>' +
+        '<td style="color:var(--alto)">'  + s.totais.matchesAlto  + trend(s.totais.matchesAlto,  prev?.totais.matchesAlto)  + '</td>' +
+        '<td style="color:var(--medio)">' + s.totais.matchesMedio + '</td></tr>';
+    }).join('');
+    histSection = `
+  <div class="mkt-section">
+    <h3>📅 Tendências (últimos dias)</h3>
+    <table class="mkt-table">
+      <thead><tr><th>Data</th><th>Ofertas</th><th>Buscas</th><th>Alto</th><th>Médio</th></tr></thead>
+      <tbody>${histRows}</tbody>
+    </table>
+  </div>`;
+  } else {
+    histSection = `
+  <div class="mkt-section">
+    <h3>📅 Tendências</h3>
+    <div style="color:var(--muted);font-size:13px;padding:8px 0">Tendências aparecem após o segundo dia de execução. Execute o fluxo diariamente para acumular histórico.</div>
+  </div>`;
+  }
+
+  return `<div style="max-width:960px">
+  ${statsHtml}
+  <div class="mkt-section">
+    <h3>🗺️ Análise por Setor — clique para expandir</h3>
+    <div class="mkt-setores-lista">${setoresCards || '<div style="color:var(--muted)">Nenhum setor identificado</div>'}</div>
+  </div>
+  ${histSection}
+</div>`;
+}
+
 // ── Gera HTML ───────────────────────────────────────────────────────────────
 
 const agora = new Date();
@@ -464,17 +732,35 @@ const dataStr = agora.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digi
 const horaStr = agora.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 const ts = agora.toISOString().slice(0,16).replace('T','_').replace(':','-');
 
-const matchesAlto = matches.filter(m => m.nivel === 'ALTO').slice(0, 30);
-const matchesMedio = matches.filter(m => m.nivel === 'MÉDIO').slice(0, 20);
-const matchesExibidos = [...matchesAlto, ...matchesMedio];
-const matchCards = matchesExibidos.map((m, i) => cardMatch(m, i)).join('');
+const matchesExibidos = { length: matchesCompact.length }; // placeholder para stats
+
+// Snapshot de mercado do dia
+const mercadoHoje = {
+  data: agora.toISOString().slice(0, 10),
+  ts: agora.getTime(),
+  totais: { ofertas: ofertasRich.length, buscas: buscasRich.length, matchesAlto: totalAlto, matchesMedio: totalMedio },
+  setores: setoresRanking,
+  tipos: mTipos,
+  faixas: faixasData,
+};
+
+// Atualiza snapshot_mercado.json
+(function() {
+  const hoje = mercadoHoje.data;
+  const hist = snapHist.filter(s => s.data !== hoje);
+  hist.push(mercadoHoje);
+  hist.sort((a, b) => a.ts - b.ts);
+  const final = hist.length > 90 ? hist.slice(-90) : hist;
+  fs.writeFileSync(snapFile, JSON.stringify(final), 'utf8');
+  snapHist.length = 0; final.forEach(x => snapHist.push(x));
+})();
 
 const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MatchZap · ${dataStr}</title>
+<title>NexuHunt · ${dataStr}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -624,9 +910,90 @@ a{color:var(--teal);text-decoration:none}
 .periodo-btn:hover{border-color:var(--teal);color:var(--teal)}
 .periodo-btn.active{background:var(--teal);border-color:var(--teal);color:#000;font-weight:700}
 .periodo-count{font-size:13px;color:var(--muted);margin-left:6px}
+.periodo-count b{color:var(--white)}
+
+/* Recência */
+.rec-badge{font-size:11px;padding:2px 8px;border-radius:10px;margin-left:auto;font-weight:600;white-space:nowrap}
+.rec-hoje{background:#27AE6025;color:var(--alto)}
+.rec-ontem{background:#F39C1225;color:var(--medio)}
+.rec-semana{background:#E0522525;color:#E05225}
+.rec-antigo{background:#33333325;color:var(--muted)}
+
+/* Separador ALTO/MÉDIO */
+.nivel-sep{text-align:center;padding:20px 0 8px;position:relative}
+.nivel-sep::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:var(--border)}
+.nivel-sep span{position:relative;background:var(--bg);padding:4px 16px;font-size:11px;font-weight:700;color:var(--medio);letter-spacing:1px}
+
+/* Ver mais */
+.ver-mais-wrap{text-align:center;padding:20px}
+.ver-mais-btn{background:transparent;border:1px solid var(--teal);color:var(--teal);padding:10px 28px;border-radius:8px;font-size:14px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:500;transition:all .2s}
+.ver-mais-btn:hover{background:var(--teal);color:#000}
+
+/* Texto expandível */
+.txt-toggle{background:transparent;border:none;color:var(--teal);font-size:11px;cursor:pointer;padding:2px 0;font-family:'Inter',sans-serif;display:block;margin-top:4px}
+.txt-toggle:hover{text-decoration:underline}
+
+/* Copy tel */
+.copy-tel{background:transparent;border:none;cursor:pointer;font-size:11px;padding:0 3px;opacity:.5;vertical-align:middle;transition:opacity .15s}
+.copy-tel:hover{opacity:1}
+.telefone a{color:var(--alto);text-decoration:none}
+.telefone a:hover{text-decoration:underline}
+/* Lookup de contato */
+.corretor-unk{color:var(--muted)}
+.btn-lkp{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:4px;cursor:pointer;font-size:11px;padding:1px 5px;margin-left:4px;vertical-align:middle;transition:background .15s;color:inherit}
+.btn-lkp:hover{background:rgba(255,255,255,.14)}
+.btn-lkp:disabled{opacity:.5;cursor:default}
+.btn-lkp-tel{font-size:11px;color:var(--muted)}
+.wa-msg-btn{color:#25d366;text-decoration:none;font-size:15px;margin-left:5px;vertical-align:middle;opacity:.85;transition:opacity .15s}
+.wa-msg-btn:hover{opacity:1}
+/* Card footer / botão notificar */
+.card-footer{padding:10px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.02)}
+.btn-notificar{background:linear-gradient(135deg,#25d36622,#128c7e22);border:1px solid #25d36640;color:#25d366;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.3px}
+.btn-notificar:hover:not(:disabled){background:linear-gradient(135deg,#25d36633,#128c7e33);border-color:#25d36680}
+.btn-notificar:disabled{opacity:.5;cursor:default}
+.btn-notificar.enviado{background:transparent;border-color:var(--border);color:var(--muted);font-weight:400}
+.btn-notificar.parcial{border-color:#e67e2240;color:#e67e22}
+.wa-status-dot{width:7px;height:7px;border-radius:50%;background:#888;display:inline-block;margin-right:4px;vertical-align:middle}
+.wa-status-dot.ok{background:#25d366}
+/* Modal de confirmação de envio */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
+.modal-box{background:#1e1e2e;border:1px solid var(--border);border-radius:14px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.modal-title{font-size:15px;font-weight:700;color:var(--white);margin-bottom:16px}
+.modal-lado{margin-bottom:16px}
+.modal-lado-label{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--muted);margin-bottom:6px}
+.modal-msg{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;line-height:1.6;color:#ccc;white-space:pre-wrap;word-break:break-word}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.modal-btn-cancel{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;transition:all .2s}
+.modal-btn-cancel:hover{border-color:#fff4;color:var(--white)}
+.modal-btn-send{background:#25d366;border:none;color:#000;border-radius:8px;padding:8px 22px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.modal-btn-send:hover{opacity:.85}
+
+/* Empty state */
+.empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty-state b{display:block;color:var(--white);font-size:17px;margin-bottom:8px}
+.empty-state p{font-size:13px;line-height:1.7;margin-bottom:16px}
 
 /* Footer */
 .footer{text-align:center;padding:32px 20px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);margin-top:40px}
+
+/* Buyer group cards */
+.buyer-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.buyer-card.nivel-alto{border-color:#27AE6040}
+.buyer-card.nivel-médio,.buyer-card.nivel-medio{border-color:#F39C1240}
+.buyer-card-header{padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);flex-wrap:wrap;background:var(--gold-dim)}
+.buyer-count{font-size:12px;color:var(--muted);margin-left:auto}
+.buyer-info{padding:16px;border-bottom:1px solid var(--border)}
+.offers-label{padding:8px 16px;font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.8px;text-transform:uppercase;background:var(--teal-dim);border-bottom:1px solid var(--border)}
+.offer-row{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.offer-row:last-child{border-bottom:none}
+.offer-row:hover{background:rgba(255,255,255,.02)}
+.offer-nome{font-weight:600;font-size:14px}
+.offer-razoes{font-size:12px;color:var(--muted);flex:1;min-width:0}
+.offer-expand-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:12px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;flex-shrink:0;white-space:nowrap}
+.offer-expand-btn:hover{border-color:var(--teal);color:var(--teal)}
+.offer-detail{width:100%;padding:10px 0 4px;font-size:12px;color:var(--muted);line-height:1.5;border-top:1px solid var(--border);margin-top:8px}
+.offer-val{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--gold);flex-shrink:0}
+.offer-emp{font-size:13px;color:var(--teal);font-weight:600;flex-shrink:0}
 
 /* ── Filtrar ────────────────────────────────────────────────────────────── */
 .filtrar-layout{display:grid;grid-template-columns:268px 1fr;gap:16px;align-items:start}
@@ -662,16 +1029,71 @@ a{color:var(--teal);text-decoration:none}
 .f-count b{color:var(--white);font-size:15px}
 .f-empty{text-align:center;padding:40px 20px;color:var(--muted)}
 .f-empty b{display:block;color:var(--white);margin-bottom:8px;font-size:15px}
+
+/* Botão Rodar */
+.run-btn{background:var(--teal);color:#000;font-weight:700;font-size:13px;padding:7px 16px;border:none;border-radius:8px;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity .2s;flex-shrink:0}
+.run-btn:hover{opacity:.85}
+.run-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* Mercado */
+.mkt-stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.mkt-stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;min-width:110px;text-align:center}
+.mkt-stat-num{font-size:26px;font-weight:700;color:var(--teal)}
+.mkt-stat-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
+.mkt-section{margin-bottom:28px}
+.mkt-section h3{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.mkt-table{width:100%;border-collapse:collapse;font-size:13px}
+.mkt-table th{background:var(--surface);color:var(--muted);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.mkt-table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+.mkt-bar-wrap{display:flex;align-items:center;gap:8px}
+.mkt-bar{height:8px;border-radius:4px;flex-shrink:0;min-width:2px}
+.mkt-busca{background:var(--gold)}
+.mkt-oferta{background:var(--teal)}
+.mkt-sinal{font-size:11px;padding:3px 9px;border-radius:4px;white-space:nowrap}
+.mkt-alta-demanda{background:#E0525215;color:#E05252;border:1px solid #E0525240}
+.mkt-equilibrado{background:rgba(234,179,8,.1);color:var(--gold);border:1px solid rgba(234,179,8,.3)}
+.mkt-alta-oferta{background:rgba(0,201,167,.08);color:var(--teal);border:1px solid rgba(0,201,167,.25)}
+/* Setor cards */
+.mkt-setores-lista{display:flex;flex-direction:column;gap:8px}
+.mkt-setor-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.mkt-setor-card[open]{border-color:#2e3d3a}
+.mkt-setor-sum{list-style:none;display:flex;align-items:center;gap:14px;padding:13px 16px;cursor:pointer;flex-wrap:wrap;user-select:none}
+.mkt-setor-sum::-webkit-details-marker{display:none}
+.mkt-setor-sum:hover{background:rgba(255,255,255,.03)}
+.mkt-setor-nome{font-weight:700;font-size:14px;min-width:130px}
+.mkt-setor-bars{display:flex;flex-direction:column;gap:5px;flex:1;min-width:200px}
+.mkt-setor-arrow{color:var(--muted);font-size:11px;margin-left:auto;transition:transform .2s}
+.mkt-setor-card[open] .mkt-setor-arrow{transform:rotate(90deg)}
+.mkt-setor-det{padding:16px 20px;border-top:1px solid var(--border);background:rgba(0,0,0,.2)}
+.mkt-det-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.mkt-det-bloco{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.mkt-det-titulo{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+.mkt-preco-box{display:flex;flex-direction:column;gap:7px}
+.mkt-preco-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
+.mkt-preco-val{font-size:14px;font-weight:700;color:var(--teal)}
+.mkt-emp-tag{font-size:12px;padding:4px 10px;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--white)}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="logo">MZ</div>
+  <div class="logo">NH</div>
   <div class="header-meta">
     <b>${dataStr} · ${horaStr}</b> &nbsp;·&nbsp; 10 grupos monitorados
   </div>
   ${dropdownHistorico()}
+  <span id="wa-dot" class="wa-status-dot" title="Verificando WhatsApp sender..."></span>
+  <button class="run-btn" id="run-btn" onclick="iniciarFluxo()">▶ Rodar</button>
+</div>
+
+<div id="fluxo-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:500;padding:16px;box-sizing:border-box">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;max-width:680px;margin:48px auto 0;display:flex;flex-direction:column;max-height:calc(100vh - 96px)">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--teal);font-size:14px">▶ NexuHunt — Fluxo</span>
+      <button onclick="fecharModal()" style="margin-left:auto;background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;font-size:13px">✕ Fechar</button>
+    </div>
+    <div id="fluxo-log" style="flex:1;overflow-y:auto;padding:16px 18px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.8;white-space:pre-wrap;color:var(--white)"></div>
+  </div>
 </div>
 
 <div class="stats">
@@ -698,11 +1120,12 @@ a{color:var(--teal);text-decoration:none}
 </div>
 
 <div class="tabs">
-  <div class="tab active" onclick="showTab('matches', this)">🎯 Matches (${matchesExibidos.length} de ${matches.length})</div>
+  <div class="tab active" id="tab-matches" onclick="showTab('matches', this)">🎯 Matches</div>
   <div class="tab" onclick="showTab('demanda', this)">🔍 Demanda (${compradores})</div>
   <div class="tab" onclick="showTab('alertas', this)">⚠️ Alertas</div>
   <div class="tab" onclick="showTab('buscar', this)">🔎 Buscar</div>
   <div class="tab" onclick="showTab('filtrar', this)">⚙️ Filtrar</div>
+  <div class="tab" onclick="showTab('mercado', this)">📈 Mercado</div>
 </div>
 
 <div id="matches" class="tab-content active">
@@ -712,9 +1135,7 @@ a{color:var(--teal);text-decoration:none}
     <button class="periodo-btn active" onclick="filtrarPeriodo('15d', this)">📅 15 dias</button>
     <span id="periodo-count" class="periodo-count"></span>
   </div>
-  <div id="matches-cards" style="padding:20px">
-    ${matchCards || '<p class="vazio">Nenhum match encontrado no período.</p>'}
-  </div>
+  <div id="matches-cards" style="padding:20px 20px 0"></div>
 </div>
 
 <div id="demanda" class="tab-content">
@@ -822,14 +1243,21 @@ a{color:var(--teal);text-decoration:none}
   </div>
 </div>
 
+<div id="mercado" class="tab-content">
+  <div style="padding:20px">
+    ${tabMercado(mercadoHoje, snapHist)}
+  </div>
+</div>
+
 <div class="footer">
-  Gerado por MatchZap · ${dataStr} ${horaStr} · ${ofertas.length + buscas.length} mensagens de 10 grupos do WhatsApp
+  Gerado por NexuHunt · ${dataStr} ${horaStr} · ${ofertas.length + buscas.length} mensagens de 10 grupos do WhatsApp
 </div>
 
 <script>
 // ── Dataset embarcado ───────────────────────────────────────────────────────
-const DS_OFERTAS = ${JSON.stringify(ofertasRich)};
-const DS_BUSCAS  = ${JSON.stringify(buscasRich)};
+const DS_OFERTAS  = ${JSON.stringify(ofertasRich)};
+const DS_BUSCAS   = ${JSON.stringify(buscasRich)};
+const DS_MATCHES  = ${JSON.stringify(matchesCompact)};
 
 const SETORES = ${JSON.stringify(SETORES_GO)};
 
@@ -1245,35 +1673,449 @@ function limparFiltros() {
   aplicarFiltros();
 }
 
-// ── Filtro de período nos matches ────────────────────────────────────────────
+// ── Renderização client-side de matches — lado a lado ───────────────────────
+var _periodoAtivo = '15d';
+var _matchesFiltrados = [];
+var _matchesOrdenados = [];
+var _sepShown = false;
+var _mostrados = 0;
+var _PAGINA = 30;
+
 function filtrarPeriodo(p, el) {
-  document.querySelectorAll('.periodo-btn').forEach(b => b.classList.remove('active'));
+  _periodoAtivo = p;
+  _mostrados = 0;
+  _sepShown = false;
+  document.querySelectorAll('.periodo-btn').forEach(function(b){ b.classList.remove('active'); });
   el.classList.add('active');
-  const agora = Date.now();
-  const hojeInicio = new Date(); hojeInicio.setHours(0, 0, 0, 0);
-  const semanaInicio = agora - 7 * 24 * 60 * 60 * 1000;
-  const cards = document.querySelectorAll('#matches-cards .card-match');
-  let vis = 0;
-  cards.forEach(c => {
-    const ts = parseInt(c.dataset.ts || '0');
-    let show;
-    if (p === 'hoje')      show = ts >= hojeInicio.getTime();
-    else if (p === '7d')   show = ts >= semanaInicio;
-    else                   show = true; // 15 dias = tudo
-    c.style.display = show ? '' : 'none';
-    if (show) vis++;
+  var agora = Date.now();
+  var hojeMs = new Date().setHours(0,0,0,0);
+  _matchesFiltrados = DS_MATCHES.filter(function(m) {
+    if (p === 'hoje') return m.ts >= hojeMs;
+    if (p === '7d')   return m.ts >= agora - 7*24*60*60*1000;
+    return true;
   });
-  const label = p === 'hoje' ? 'hoje' : p === '7d' ? 'últimos 7 dias' : 'últimos 15 dias';
-  document.getElementById('periodo-count').textContent = vis + ' match' + (vis !== 1 ? 'es' : '') + ' — ' + label;
+  _matchesOrdenados = _matchesFiltrados.slice().sort(function(a, b) {
+    if (a.n !== b.n) return a.n === 'ALTO' ? -1 : 1;
+    if ((b.s||0) !== (a.s||0)) return (b.s||0) - (a.s||0);
+    return b.ts - a.ts;
+  });
+  _renderPagina(true);
+}
+
+function _renderPagina(reset) {
+  var container = document.getElementById('matches-cards');
+  var total  = _matchesOrdenados.length;
+  var nAlto  = _matchesOrdenados.filter(function(m){ return m.n === 'ALTO'; }).length;
+  var nMedio = total - nAlto;
+
+  document.querySelector('.stat-alto .stat-num').textContent  = nAlto;
+  document.querySelector('.stat-medio .stat-num').textContent = nMedio;
+
+  var tabEl = document.getElementById('tab-matches');
+  var pLabels = {hoje:'hoje','7d':'últimos 7 dias','15d':'últimos 15 dias'};
+  document.getElementById('periodo-count').innerHTML =
+    '<b>' + nAlto + '</b> ALTO · <b>' + nMedio + '</b> MÉDIO — ' + pLabels[_periodoAtivo];
+
+  if (reset) {
+    container.innerHTML = '';
+    var old = document.getElementById('ver-mais-btn');
+    if (old) old.remove();
+  }
+
+  if (total === 0) {
+    container.innerHTML = _emptyState(_periodoAtivo);
+    if (tabEl) tabEl.textContent = '🎯 Matches (0)';
+    return;
+  }
+
+  var lote = _matchesOrdenados.slice(_mostrados, _mostrados + _PAGINA);
+  var html  = '';
+
+  for (var i = 0; i < lote.length; i++) {
+    var m = lote[i];
+    var globalIdx = _mostrados + i;
+    if (!_sepShown && m.n === 'MÉDIO' && nAlto > 0) {
+      html += '<div class="nivel-sep"><span>MÉDIO</span></div>';
+      _sepShown = true;
+    }
+    html += _renderMatchCard(m, globalIdx);
+  }
+
+  container.insertAdjacentHTML('beforeend', html);
+  _mostrados += lote.length;
+  if (tabEl) tabEl.textContent = '🎯 Matches (' + _mostrados + ' de ' + total + ')';
+
+  var oldBtn = document.getElementById('ver-mais-btn');
+  if (oldBtn) oldBtn.remove();
+  if (_mostrados < total) {
+    var restante = Math.min(_PAGINA, total - _mostrados);
+    var wrap = document.createElement('div');
+    wrap.id = 'ver-mais-btn';
+    wrap.className = 'ver-mais-wrap';
+    wrap.innerHTML = '<button class="ver-mais-btn" onclick="_renderPagina(false)">Ver mais ' + restante + ' ▼</button>';
+    container.after(wrap);
+  }
+}
+
+function _renderMatchCard(m, idx) {
+  var b     = DS_BUSCAS[m.b];
+  var o     = DS_OFERTAS[m.o];
+  var nivel = m.n;
+  var razoes = m.r || [];
+  if (!b || !o) return '';
+
+  var acao = (idx === 0 && nivel === 'ALTO') ? '<div class="acao-imediata">⚡ AÇÃO IMEDIATA</div>' : '';
+
+  var badges = '<span class="badge ' + (nivel === 'ALTO' ? 'badge-alto' : 'badge-medio') + '">' + nivel + '</span>';
+  if (b.urgente) badges += '<span class="badge badge-urgente">URGENTE</span>';
+  if (b.aVista)  badges += '<span class="badge badge-avista">À VISTA</span>';
+  if (b.permuta) badges += '<span class="badge badge-permuta">PERMUTA</span>';
+  var cnt = b.contagem || 1;
+  if (cnt >= 3)  badges += '<span class="badge badge-hot">🔥 ' + cnt + 'x</span>';
+
+  var razaoHtml = razoes.length
+    ? '<span class="match-razao">✓ ' + _esc(razoes.join(' · ')) + '</span>'
+    : '';
+
+  var bDetalhes = '<b>Tipo:</b> ' + _esc(b.tipo||'') +
+    (b.quartos ? ' · ' + b.quartos + ' qtos' : '') +
+    (b.area    ? ' · ' + b.area + 'm²'       : '');
+
+  var oDetalhes = '<b>Tipo:</b> ' + _esc(o.tipo||'') +
+    (o.suites  ? ' · ' + o.suites + ' suítes' : (o.quartos ? ' · ' + o.quartos + ' qtos' : '')) +
+    (o.area    ? ' · ' + o.area + 'm²'        : '');
+
+  var bGrupo = b.g || b.grupo || '';
+  var oGrupo = o.g || o.grupo || '';
+
+  // Mensagem para o corretor que está BUSCANDO (recebe resumo da oferta encontrada)
+  var bResumo = (b.tipo || 'imóvel')
+    + (b.suites ? ' · ' + b.suites + ' suítes' : (b.quartos ? ' · ' + b.quartos + ' qtos' : ''))
+    + (b.setores && b.setores[0] ? ' · ' + b.setores[0] : '')
+    + (b.orcamento ? ' · até R$ ' + parseInt(b.orcamento).toLocaleString('pt-BR') : '');
+  var oResMatch = (o.emp ? o.emp + '\\n' : '')
+    + (o.tipo || 'imóvel')
+    + (o.suites ? ' · ' + o.suites + ' suítes' : (o.quartos ? ' · ' + o.quartos + ' qtos' : ''))
+    + (o.area ? ' · ' + o.area + 'm²' : '')
+    + (o.valor ? ' · R$ ' + parseInt(o.valor).toLocaleString('pt-BR') : '');
+  var bMsg = 'Olá! O *NexuHunt* identificou um match para sua busca nos grupos de WhatsApp 🎯'
+    + '\\n\\nVocê buscou: ' + bResumo
+    + '\\n\\nMatch encontrado:'
+    + (o.emp ? '\\n🏢 ' + o.emp : '')
+    + '\\n🏠 ' + (o.tipo || 'imóvel') + (o.suites ? ' · ' + o.suites + ' suítes' : (o.quartos ? ' · ' + o.quartos + ' qtos' : '')) + (o.area ? ' · ' + o.area + 'm²' : '')
+    + (o.valor ? '\\n💰 R$ ' + parseInt(o.valor).toLocaleString('pt-BR') : '')
+    + (oGrupo ? '\\n📋 Visto em: ' + oGrupo : '')
+    + '\\n\\nPosso conectar vocês? Topa?';
+
+  // Mensagem para o corretor que fez a OFERTA (recebe resumo da busca encontrada)
+  var oOferta = (o.emp ? o.emp : (o.tipo || 'imóvel'))
+    + (o.suites ? ' · ' + o.suites + ' suítes' : (o.quartos ? ' · ' + o.quartos + ' qtos' : ''))
+    + (o.area ? ' · ' + o.area + 'm²' : '')
+    + (o.valor ? ' · R$ ' + parseInt(o.valor).toLocaleString('pt-BR') : '');
+  var oMsg = 'Olá! O *NexuHunt* identificou um cliente para sua oferta nos grupos de WhatsApp 🎯'
+    + '\\n\\nSua oferta: ' + oOferta
+    + '\\n\\nMatch com busca ativa:'
+    + '\\n🔍 ' + (b.tipo || 'imóvel') + (b.suites ? ' · ' + b.suites + ' suítes' : (b.quartos ? ' · ' + b.quartos + ' qtos' : '')) + (b.setores && b.setores[0] ? ' · ' + b.setores[0] : '')
+    + (b.orcamento ? '\\n💰 Orçamento: até R$ ' + parseInt(b.orcamento).toLocaleString('pt-BR') : '')
+    + (bGrupo ? '\\n📋 Visto em: ' + bGrupo : '')
+    + '\\n\\nPosso conectar vocês? Topa?';
+
+  return '<div class="card-match nivel-' + nivel.toLowerCase() + '">' +
+    acao +
+    '<div class="card-header">' + badges + razaoHtml + '</div>' +
+    '<div class="card-body">' +
+      '<div class="lado busca-lado" data-wa-msg="' + _esc(bMsg) + '">' +
+        '<div class="lado-label">BUSCA</div>' +
+        _corretorHtml(b.nomeExibir, b.lidRaw) +
+        '<div class="horario">' + _esc(b.hora) + '</div>' +
+        '<div class="grupo-tag">📍 ' + _esc(b.g || b.grupo) + '</div>' +
+        (_telHtml(b.telExibir || b.tel, bMsg) || _telLookupHtml(b.nomeExibir, b.lidRaw)) +
+        '<div class="divider"></div>' +
+        '<div class="detalhe">' + bDetalhes + '</div>' +
+        (b.orcamento ? '<div class="detalhe"><b>Orçamento:</b> ' + _fmtVal(b.orcamento) + '</div>' : '') +
+        _txtExp(b.txt) +
+      '</div>' +
+      '<div class="lado oferta-lado" data-wa-msg="' + _esc(oMsg) + '">' +
+        '<div class="lado-label">OFERTA</div>' +
+        (o.emp ? '<div class="empreendimento">' + _esc(o.emp) + '</div>' : '') +
+        (o.valor ? '<div class="valor">' + _fmtVal(o.valor) + '</div>' : '') +
+        _corretorHtml(o.nomeExibir, o.lidRaw) +
+        '<div class="horario">' + _esc(o.hora) + '</div>' +
+        '<div class="grupo-tag">📍 ' + _esc(o.g || o.grupo) + '</div>' +
+        (_telHtml(o.telExibir || o.tel, oMsg) || _telLookupHtml(o.nomeExibir, o.lidRaw)) +
+        '<div class="divider"></div>' +
+        '<div class="detalhe">' + oDetalhes + '</div>' +
+        _txtExp(o.txt) +
+      '</div>' +
+    '</div>' +
+    '<div class="card-footer">' +
+      '<button class="btn-notificar" ' +
+        'data-b-id="' + _esc(b.lidRaw || '') + '" ' +
+        'data-o-id="' + _esc(o.lidRaw || '') + '" ' +
+        'data-b-msg="' + _esc(bMsg) + '" ' +
+        'data-o-msg="' + _esc(oMsg) + '" ' +
+        'onclick="enviarMatch(this)">' +
+        '🤝 Notificar Match' +
+      '</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function _esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function _fmtVal(v) {
+  if (!v) return '';
+  return 'R$ ' + parseInt(v).toLocaleString('pt-BR');
+}
+function _recencia(ts) {
+  if (!ts) return {txt:'',cls:''};
+  var hojeMs = new Date().setHours(0,0,0,0);
+  var dias   = Math.floor((Date.now() - ts) / 86400000);
+  if (ts >= hojeMs) return {txt:'🟢 hoje',   cls:'rec-hoje'};
+  if (dias === 1)   return {txt:'🟡 ontem',  cls:'rec-ontem'};
+  if (dias <= 7)    return {txt:'🟠 '+dias+'d', cls:'rec-semana'};
+  return {txt:'⚪ '+dias+'d', cls:'rec-antigo'};
+}
+function _corretorHtml(nome, lid) {
+  if (nome) return '<div class="corretor">' + _esc(nome) + '</div>';
+  var safeLid = _esc(lid || '');
+  if (safeLid) return '<div class="corretor corretor-unk">Corretor <button class="btn-lkp" data-lid="' + safeLid + '" onclick="lkp(this)" title="Buscar contato">🔍</button></div>';
+  return '<div class="corretor">Corretor</div>';
+}
+function _telLookupHtml(nome, lid) {
+  // Só mostra botão de tel quando já tem nome mas não tem tel (ou quando não tem nome, já tem botão no corretor)
+  if (!lid || !nome) return '';
+  return '<div class="telefone"><button class="btn-lkp btn-lkp-tel" data-lid="' + _esc(lid) + '" onclick="lkp(this)" title="Buscar telefone">📞 buscar</button></div>';
+}
+function _telHtml(tel, msg) {
+  if (!tel) return '';
+  var d = String(tel).replace(/[^0-9]/g, '');
+  if (!d || d.length > 13) return ''; // LID ou inválido — não exibe
+  var waNum, display;
+  if (d.length >= 12 && d.slice(0,2) === '55') {
+    waNum = d;
+    var ddd = d.slice(2,4), num = d.slice(4);
+    display = '(' + ddd + ') ' + (num.length===9 ? num.slice(0,5)+'-'+num.slice(5) : num.slice(0,4)+'-'+num.slice(4));
+  } else if (d.length >= 10 && d.length <= 11) {
+    waNum = '55' + d;
+    var ddd2 = d.slice(0,2), num2 = d.slice(2);
+    display = '(' + ddd2 + ') ' + (num2.length===9 ? num2.slice(0,5)+'-'+num2.slice(5) : num2.slice(0,4)+'-'+num2.slice(4));
+  } else {
+    return ''; // formato não reconhecido
+  }
+  var safe = _esc(d);
+  var copyBtn = '<button class="copy-tel" data-tel="' + safe + '" onclick="cpTel(this)" title="Copiar">📋</button>';
+  var waUrl = 'https://wa.me/' + waNum;
+  var msgBtn = msg ? '<a class="wa-msg-btn" href="' + waUrl + '?text=' + encodeURIComponent(msg) + '" target="_blank" title="Enviar mensagem no WhatsApp">💬</a>' : '';
+  return '<div class="telefone"><a href="' + waUrl + '" target="_blank">📞 ' + _esc(display) + '</a> ' + copyBtn + msgBtn + '</div>';
+}
+function cpTel(btn) {
+  navigator.clipboard.writeText(btn.dataset.tel).then(function() {
+    btn.textContent = '✓'; setTimeout(function(){ btn.textContent = '📋'; }, 1200);
+  });
+}
+function lkp(btn) {
+  var lid = btn.dataset.lid;
+  if (!lid) return;
+  btn.textContent = '⏳';
+  btn.disabled = true;
+  fetch('http://localhost:3721/contato/' + lid)
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || (!data.nome && !data.tel)) { btn.textContent = '?'; return; }
+      var lado = btn.closest('.lado');
+      if (data.nome) {
+        var corr = lado.querySelector('.corretor');
+        if (corr) corr.innerHTML = data.nome;
+      }
+      if (data.tel) {
+        var d = data.tel.replace(/[^0-9]/g, '');
+        var waNum = (d.length <= 11) ? '55' + d : d;
+        var fmt = '(' + d.slice(0,2) + ') ' + (d.length >= 11 ? d.slice(2,7)+'-'+d.slice(7) : d.slice(2,6)+'-'+d.slice(6));
+        var waUrl = 'https://wa.me/' + waNum;
+        var waMsg = lado.dataset.waMsg || '';
+        var msgBtn = waMsg ? ' <a class="wa-msg-btn" href="' + waUrl + '?text=' + encodeURIComponent(waMsg) + '" target="_blank" title="Enviar mensagem">💬</a>' : '';
+        var telDiv = lado.querySelector('.telefone');
+        if (!telDiv) {
+          telDiv = document.createElement('div');
+          telDiv.className = 'telefone';
+          var gt = lado.querySelector('.grupo-tag');
+          if (gt) gt.after(telDiv); else lado.prepend(telDiv);
+        }
+        telDiv.innerHTML = '<a href="' + waUrl + '" target="_blank">📞 ' + fmt + '</a> <button class="copy-tel" onclick="cpTel(this)" data-tel="' + d + '">📋</button>' + msgBtn;
+      }
+      // Remove todos os botões de lookup neste lado
+      lado.querySelectorAll('.btn-lkp').forEach(function(b){ b.remove(); });
+    })
+    .catch(function() { btn.textContent = '❌'; btn.disabled = false; });
+}
+function enviarMatch(btn) {
+  var bId  = btn.dataset.bId;
+  var oId  = btn.dataset.oId;
+  var bMsg = btn.dataset.bMsg;
+  var oMsg = btn.dataset.oMsg;
+  if (!bId && !oId) { btn.textContent = '❌ Sem ID de contato'; return; }
+
+  // Mostra modal de confirmação com preview das mensagens
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML =
+    '<div class="modal-box">' +
+      '<div class="modal-title">📋 Revisar mensagens antes de enviar</div>' +
+      (bMsg ? '<div class="modal-lado"><div class="modal-lado-label">PARA O CORRETOR DA BUSCA</div><div class="modal-msg">' + _esc(bMsg) + '</div></div>' : '') +
+      (oMsg ? '<div class="modal-lado"><div class="modal-lado-label">PARA O CORRETOR DA OFERTA</div><div class="modal-msg">' + _esc(oMsg) + '</div></div>' : '') +
+      '<div class="modal-actions">' +
+        '<button class="modal-btn-cancel" id="modal-cancelar">Cancelar</button>' +
+        '<button class="modal-btn-send" id="modal-confirmar">✉️ Confirmar envio</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  document.getElementById('modal-cancelar').addEventListener('click', function() { overlay.remove(); });
+
+  document.getElementById('modal-confirmar').addEventListener('click', function() {
+    overlay.remove();
+    btn.disabled = true;
+    btn.textContent = '⏳ Enviando...';
+    fetch('http://localhost:3721/enviar-match', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ bId: bId, oId: oId, bMsg: bMsg, oMsg: oMsg })
+    })
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(data) {
+      var bOk = data.b === 'ok';
+      var oOk = data.o === 'ok';
+      if (bOk && oOk) {
+        btn.textContent = '✓ Notificado — aguardando Topa';
+        btn.classList.add('enviado');
+      } else if (bOk || oOk) {
+        btn.textContent = '⚠️ Parcial: busca ' + (bOk ? '✓' : '✗') + ' · oferta ' + (oOk ? '✓' : '✗');
+        btn.classList.add('parcial');
+        btn.disabled = false;
+      } else {
+        btn.textContent = '❌ Falha no envio';
+        btn.disabled = false;
+      }
+    })
+    .catch(function() {
+      btn.textContent = '❌ Servidor offline';
+      btn.disabled = false;
+    });
+  });
+}
+// Verifica se WA sender está conectado e atualiza indicador no header
+(function checkWaStatus() {
+  fetch('http://localhost:3721/wa-status')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var dot = document.getElementById('wa-dot');
+      if (!dot) return;
+      dot.className = 'wa-status-dot' + (d.ready ? ' ok' : '');
+      dot.title = d.ready ? 'WhatsApp sender conectado' : 'WhatsApp sender desconectado — abra servidor.js';
+      document.querySelectorAll('.btn-notificar').forEach(function(b) {
+        if (!b.classList.contains('enviado')) b.disabled = !d.ready;
+      });
+    })
+    .catch(function() {});
+  setTimeout(checkWaStatus, 15000);
+})();
+function _txtExp(txt) {
+  if (!txt) return '';
+  var LIMITE = 200;
+  var e = String(txt).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  if (txt.length <= LIMITE) return '<div class="txt-original">' + e + '</div>';
+  return '<div class="txt-original">' +
+    '<span class="txt-preview">' + e.slice(0,LIMITE) + '…</span>' +
+    '<span class="txt-resto" style="display:none">' + e.slice(LIMITE) + '</span>' +
+    '<button class="txt-toggle" onclick="toggleTxt(this)">Ver mais</button>' +
+  '</div>';
+}
+function toggleTxt(btn) {
+  var prev    = btn.previousElementSibling;
+  var preview = prev.previousElementSibling;
+  var exp     = prev.style.display !== 'none';
+  preview.style.display = exp ? '' : 'none';
+  prev.style.display    = exp ? 'none' : '';
+  btn.textContent       = exp ? 'Ver mais' : 'Ver menos';
+}
+function _emptyState(p) {
+  var label = p==='hoje' ? 'hoje' : p==='7d' ? 'nessa semana' : 'nos últimos 15 dias';
+  var prox  = p==='hoje' ? '7d' : p==='7d' ? '15d' : '';
+  var proxLabel = p==='hoje' ? 'Semana' : '15 dias';
+  var btn = prox ? '<button class="ver-mais-btn" data-prox="' + prox + '" onclick="expandirPeriodo(this)">Ver ' + proxLabel + ' →</button>' : '';
+  return '<div class="empty-state"><div style="font-size:48px;margin-bottom:12px">🔍</div>' +
+    '<b>Nenhum match ' + label + '</b>' +
+    '<p>As buscas ativas podem não ter ocorrido nesse período.</p>' + btn + '</div>';
+}
+function expandirPeriodo(btn) {
+  var prox = btn.dataset.prox;
+  var idx  = prox === '7d' ? 1 : 2;
+  filtrarPeriodo(prox, document.querySelectorAll('.periodo-btn')[idx]);
+}
+
+// ── Botão Rodar ──────────────────────────────────────────────────────────────
+var _sse = null;
+
+function iniciarFluxo() {
+  var btn   = document.getElementById('run-btn');
+  var modal = document.getElementById('fluxo-modal');
+  var log   = document.getElementById('fluxo-log');
+  modal.style.display = 'block';
+  log.textContent = 'Conectando ao servidor local (localhost:3721)...\\n';
+  btn.disabled = true;
+  btn.textContent = '⏳ Rodando...';
+
+  fetch('http://localhost:3721/status', { signal: AbortSignal.timeout(3000) })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (data.running) {
+        log.textContent += 'Fluxo já está em execução — aguarde.\\n';
+        btn.disabled = false; btn.textContent = '▶ Rodar';
+        return;
+      }
+      log.textContent += 'Servidor OK. Disparando fluxo...\\n';
+      _sse = new EventSource('http://localhost:3721/rodar');
+      _sse.onmessage = function(e) {
+        if (e.data === '[DONE]') {
+          _sse.close(); _sse = null;
+          btn.disabled = false; btn.textContent = '▶ Rodar';
+          return;
+        }
+        log.textContent += e.data + '\\n';
+        log.scrollTop = log.scrollHeight;
+      };
+      _sse.onerror = function() {
+        if (_sse) { _sse.close(); _sse = null; }
+        log.textContent += '\\n❌ Conexão perdida com o servidor.\\n';
+        btn.disabled = false; btn.textContent = '▶ Rodar';
+      };
+    })
+    .catch(function() {
+      log.textContent =
+        '❌ Servidor local não encontrado em localhost:3721.\\n\\n' +
+        'Para usar este botão:\\n' +
+        '• Abra esta página no mesmo PC onde o NexuHunt roda\\n' +
+        '• Confirme que o servidor.js está ativo\\n' +
+        '  (rode agendar_tarefa.ps1 como Administrador para ativar na inicialização)';
+      btn.disabled = false; btn.textContent = '▶ Rodar';
+    });
+}
+
+function fecharModal() {
+  document.getElementById('fluxo-modal').style.display = 'none';
+  if (_sse) { _sse.close(); _sse = null; }
 }
 
 // Enter no textarea não submete — Ctrl+Enter executa
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('buscar-input').addEventListener('keydown', e => {
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('buscar-input').addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && e.ctrlKey) executarBusca();
   });
   initFiltrar();
-  // Inicializa contador do período padrão (15 dias)
+  // Inicializa renderização client-side com período padrão (15 dias)
   filtrarPeriodo('15d', document.querySelector('.periodo-btn.active'));
 });
 </script>

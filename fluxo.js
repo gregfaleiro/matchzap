@@ -47,6 +47,28 @@ try {
   process.exit(1);
 }
 
+// ── Backup OneDrive ───────────────────────────────
+const ONEDRIVE_DIR  = 'C:\\Users\\User\\OneDrive\\nexuhunt';
+const INVENTARIO    = path.join(dir, 'inventario.json');
+const CONTATOS      = path.join(dir, 'contatos_ricos.json');
+try {
+  if (fs.existsSync(INVENTARIO))
+    fs.copyFileSync(INVENTARIO, path.join(ONEDRIVE_DIR, 'inventario.json'));
+  if (fs.existsSync(CONTATOS))
+    fs.copyFileSync(CONTATOS,   path.join(ONEDRIVE_DIR, 'contatos_ricos.json'));
+  console.log('☁️  Backup OneDrive: inventario.json + contatos_ricos.json');
+} catch (e) {
+  console.warn('⚠️  Backup OneDrive falhou (não crítico):', e.message);
+}
+
+// ── ETAPA 4b: Enriquecer contatos ────────────────
+cabecalho('📇 Enriquecendo contatos...');
+try {
+  execSync('node enriquecer_contatos.js', { stdio: 'inherit', cwd: dir });
+} catch {
+  console.warn('⚠️  Enriquecimento de contatos falhou (não crítico).');
+}
+
 // ── ETAPA 5: Gerar relatório ──────────────────────
 cabecalho('📊 Gerando relatório HTML...');
 try {

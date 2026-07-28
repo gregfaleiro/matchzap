@@ -34,17 +34,19 @@ const historico = fs.existsSync(historicoPath)
   ? JSON.parse(fs.readFileSync(historicoPath, 'utf8'))
   : [];
 
-historico.unshift({
+const novaEntrada = {
   arquivo: relatorioNome,
   label: `${dd}/${mo} · ${hh}h${mm} · ${nMatches} matches`,
-});
-fs.writeFileSync(historicoPath, JSON.stringify(historico, null, 2), 'utf8');
-console.log(`✅ historico.json atualizado`);
+};
 
-// Git push
-execSync(`git add index.html "${relatorioNome}" historico.json`, { stdio: 'inherit', cwd: dir });
+// Git push — historico.json só é gravado se o push tiver sucesso
+execSync(`git add index.html "${relatorioNome}"`, { stdio: 'inherit', cwd: dir });
 execSync(`git commit -m "relatorio: atualiza ${dd}/${mo}/${yyyy}"`, { stdio: 'inherit', cwd: dir });
 execSync('git push', { stdio: 'inherit', cwd: dir });
+
+historico.unshift(novaEntrada);
+fs.writeFileSync(historicoPath, JSON.stringify(historico, null, 2), 'utf8');
+console.log(`✅ historico.json atualizado`);
 
 console.log('\n🎉 Publicado! Acesse em ~30 segundos:');
 
