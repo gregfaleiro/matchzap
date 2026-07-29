@@ -288,9 +288,9 @@ function dedupMensagens(arr) {
 const ofertasUniq = dedupMensagens(ofertasRich);
 const buscasUniq  = dedupMensagens(buscasRich);
 
-// Para matches: só buscas ativas nas últimas 48h
+// Para matches: só buscas ativas nas últimas 72h
 // (compradores que ainda estão no mercado — evita cruzar tudo × tudo)
-const LIMITE_48H = Date.now() - 48 * 60 * 60 * 1000;
+const LIMITE_48H = Date.now() - 72 * 60 * 60 * 1000;
 function parseHoraMs(hora) {
   if (!hora) return 0;
   const [datePart, timePart] = hora.split(', ');
@@ -353,11 +353,11 @@ const totalAlto  = matches.filter(m => m.nivel === 'ALTO').length;
 const totalMedio = matches.filter(m => m.nivel === 'MÉDIO').length;
 const urgencias  = buscasRich.filter(b => b.urgente || b.aVista).length;
 const compradores       = buscasRich.length;        // total no inventário
-const compradoresHoje   = buscasParaMatch.length;   // ativos nas 48h
+const compradoresHoje   = buscasParaMatch.length;   // ativos nas 72h
 const ofertasInventario = ofertasUniq.length;
 
 console.log(`🎯 Matches ALTO: ${totalAlto} | MÉDIO: ${totalMedio}`);
-console.log(`📅 Buscas 48h: ${compradoresHoje} | Inventário: ${ofertasInventario} ofertas | ${compradores} buscas`);
+console.log(`📅 Buscas 72h: ${compradoresHoje} | Inventário: ${ofertasInventario} ofertas | ${compradores} buscas`);
 
 // ── Helpers HTML ───────────────────────────────────────────────────────────
 
@@ -1103,7 +1103,7 @@ a{color:var(--teal);text-decoration:none}
   </div>
   <div class="stat">
     <div class="stat-num">${compradoresHoje}</div>
-    <div class="stat-lbl">Buscas 48h</div>
+    <div class="stat-lbl">Buscas 72h</div>
   </div>
   <div class="stat">
     <div class="stat-num">${ofertasInventario}</div>
