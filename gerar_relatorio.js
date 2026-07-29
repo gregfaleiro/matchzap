@@ -345,8 +345,10 @@ const matchesCompact = matches.map(m => {
   const bi = buscaIdxMap.get((m.busca.de||'')+'||'+(m.busca.txt||''));
   const oi = ofertaIdxMap.get((m.oferta.de||'')+'||'+(m.oferta.txt||''));
   if (bi === undefined || oi === undefined) return null;
+  const tsB = m.busca.ultimaVez  ? new Date(m.busca.ultimaVez).getTime()  : 0;
+  const tsO = m.oferta.ultimaVez ? new Date(m.oferta.ultimaVez).getTime() : 0;
   return { b: bi, o: oi, n: m.nivel, s: m.score, r: m.razoes,
-           ts: m.busca.ultimaVez ? new Date(m.busca.ultimaVez).getTime() : 0 };
+           ts: Math.max(tsB, tsO) };
 }).filter(Boolean);
 
 const totalAlto  = matches.filter(m => m.nivel === 'ALTO').length;
