@@ -309,6 +309,11 @@ const parVisto = new Set();
 
 for (const b of buscasParaMatch) {
   for (const o of ofertasUniq) {
+    // Bloqueador: não gerar auto-match (mesma pessoa nos dois lados)
+    const idB = b.tel || b.de || '';
+    const idO = o.tel || o.de || '';
+    if (idB && idO && idB === idO) continue;
+
     const { score, razoes } = calcScore(b, o);
     if (score < 5) continue;
     const parKey = (b.txt || '') + '|||' + (o.txt || '');
